@@ -172,19 +172,30 @@ streamlit run app.py
 
 ---
 
-## 📸 Screenshots
+# 🏗️ System Architecture
 
-### Home Page
+![Architecture](screenshots/architecture.png)
+
+---
+
+# 📸 Application Screenshots
+
+## 🏠 Home Page
 
 ![Home Page](screenshots/home.png)
 
-### Dashboard
+---
+
+## 📊 Structured Idea Dashboard
 
 ![Dashboard](screenshots/dashboard.png)
 
-### Architecture
+---
 
-![Architecture](screenshots/architecture.png)
+## 🌐 Live Market & Competitor Search
+
+![Search Results](screenshots/search-results.png)
+
 ---
 
 # 🚀 Future Enhancements
