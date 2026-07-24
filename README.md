@@ -174,7 +174,7 @@ streamlit run app.py
 
 # 🏗️ System Architecture
 
-![Architecture](screenshots/architecture.png)
+![Architecture](screenshots/System_Architecture.png)
 
 ---
 
@@ -182,7 +182,7 @@ streamlit run app.py
 
 ## 🏠 Home Page
 
-![Home Page](screenshots/home.png)
+![Home Page](screenshots/Home.png)
 
 ---
 
