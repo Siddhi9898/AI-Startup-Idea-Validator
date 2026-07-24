@@ -174,7 +174,7 @@ streamlit run app.py
 
 # 🏗️ System Architecture
 
-![Architecture](screenshots/architecture.png)
+![Architecture](screenshots/System_Architecture.png)
 
 ---
 
