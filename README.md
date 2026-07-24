@@ -272,7 +272,7 @@ streamlit run app.py
 **Developed as part of the Infosys Springboard Virtual Internship**
 
 - Siddhi Bhingare
-- Sravya Maheswari
+- Maheswari Sravya
 - Niharika Pamugari
 - Kasula Pavan Kumar Reddy
 - Shivam Yadav
