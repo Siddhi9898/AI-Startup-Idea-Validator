@@ -23,6 +23,7 @@ The project follows a **Multi-Agent AI Architecture**, where each intelligent ag
 - 🎨 Interactive Streamlit Dashboard
 - 📈 Executive Summary Dashboard
 - 🔒 Secure API Key Management using `.env`
+- 🔌 FastAPI Backend for REST API access (in progress)
 
 ---
 
@@ -76,9 +77,55 @@ Functions:
 |------------|---------|
 | Python | Backend Development |
 | Streamlit | User Interface |
+| FastAPI | REST API Backend (in progress) |
 | Groq API | LLM-based Idea Processing |
 | Tavily API | Live Web Search |
 | Git & GitHub | Version Control |
+
+---
+
+# 🔌 Backend API (FastAPI)
+
+As part of migrating toward the full multi-agent system architecture, a FastAPI backend has been added to expose the existing agents as REST endpoints. This runs alongside the current Streamlit app.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|--------------|
+| GET | `/health` | Health check |
+| POST | `/submit-idea` | Runs the idea through the Idea Processing Agent and Web Search Agent, returns structured extraction + market/competitor search results |
+
+## Running the API
+
+```bash
+pip install fastapi uvicorn
+
+uvicorn backend.main:app --reload
+```
+
+Then visit `http://127.0.0.1:8000/docs` for the interactive API documentation, where you can test the `/submit-idea` endpoint directly.
+
+> **Note:** This is Phase 1 of migrating to a full production architecture (FastAPI + React + PostgreSQL + Redis). The Streamlit app (`app.py`) remains fully functional as the primary interface during this transition.
+
+---
+
+# 🧪 Backend API Demo
+
+## API Documentation (Swagger UI)
+
+![FastAPI Docs](screenshots/fastapi-docs.png)
+
+## Health Check
+
+![Health Check](screenshots/health-check.png)
+
+## Submit Idea — Request
+
+![Submit Idea Input](screenshots/submit-idea-input.png)
+
+## Submit Idea — Response
+
+![Submit Idea Output](screenshots/submit-idea-output.png)
 
 ---
 
@@ -93,10 +140,17 @@ AI-Startup-Idea-Validator/
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
+├── backend/
+│   └── main.py
 ├── screenshots/
-│   ├── home.png
+│   ├── Home.png
 │   ├── dashboard.png
-│   └── architecture.png
+│   ├── search-results.png
+│   ├── System_Architecture.png
+│   ├── fastapi-docs.png
+│   ├── health-check.png
+│   ├── submit-idea-input.png
+│   └── submit-idea-output.png
 ```
 
 > **Note:** API keys are stored locally in a `.env` file, which is excluded from GitHub using `.gitignore`.
@@ -174,7 +228,7 @@ streamlit run app.py
 
 # 🏗️ System Architecture
 
-![Architecture](screenshots/System_Architecture.png)
+![Architecture](screenshots/System_Arcitecture.png)
 
 ---
 
@@ -218,7 +272,7 @@ streamlit run app.py
 **Developed as part of the Infosys Springboard Virtual Internship**
 
 - Siddhi Bhingare
-- Sravya Maheswari
+- Maheswari Sravya
 - Niharika Pamugari
 - Kasula Pavan Kumar Reddy
 - Shivam Yadav
@@ -233,6 +287,7 @@ Implemented:
 
 - ✔️ Idea Processing Agent
 - ✔️ Web Search Agent
+- ✔️ FastAPI backend wrapping Idea Processing + Web Search agents
 
 In Progress:
 
