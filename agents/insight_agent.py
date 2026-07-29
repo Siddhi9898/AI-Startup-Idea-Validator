@@ -1,26 +1,17 @@
 """
 Insight Agent
 -------------
-Generates the "human" layer of the report: blind spots, honest summary,
-elevator pitch, and funding suggestions. All built as LLM prompts reusing
-the same client/model already set up in extraction_agent.py.
-
-NOTE: This assumes you already have a Groq client set up in
-extraction_agent.py (e.g., a `client` object using the groq package).
-Adjust the import below to match your actual client setup.
+Generates the mentor-style layer of the report: blind spots, honest
+summary, elevator pitch, and funding suggestions. (Moved into agents/
+per architecture doc; logic unchanged from the working version.)
 """
 
 import json
-
-# Reuse the same Groq client your extraction_agent.py already uses.
-# Adjust this import to match your actual variable/module name.
-from extraction_agent import client
-
-MODEL_NAME = "llama-3.3-70b-versatile"  # e.g. MODEL_NAME = "llama-3.3-70b-versatile"
+from agents.idea_extraction_agent import client
+from app.config import MODEL_NAME
 
 
 def _call_llm(prompt: str) -> str:
-    """Sends a prompt to the LLM and returns raw text response."""
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
@@ -30,10 +21,6 @@ def _call_llm(prompt: str) -> str:
 
 
 def find_blind_spots(extracted: dict) -> dict:
-    """
-    Identifies 1-2 important things the founder likely hasn't
-    addressed yet, phrased as direct questions back to them.
-    """
     prompt = f"""
 You are a experienced startup mentor reviewing this idea:
 
@@ -53,15 +40,11 @@ Respond ONLY as a JSON list of strings, nothing else. Example:
     try:
         questions = json.loads(raw)
     except json.JSONDecodeError:
-        questions = [raw]  # fallback: return raw text if parsing fails
+        questions = [raw]
     return {"blind_spots": questions}
 
 
 def generate_honest_summary(extracted: dict, search_results: dict, viability: dict) -> dict:
-    """
-    Produces a short, grounded, plain-language closing summary -
-    the kind of honest take a mentor would give, not just a dashboard.
-    """
     competitor_count = len(search_results.get("results", [])) if search_results else 0
 
     prompt = f"""
@@ -83,9 +66,6 @@ Respond with plain text only, no headers or bullet points.
 
 
 def generate_elevator_pitch(extracted: dict) -> dict:
-    """
-    Generates a punchy one-line pitch and a short tagline for the idea.
-    """
     prompt = f"""
 Based on this startup idea, write:
 1. A punchy one-sentence elevator pitch (like a Y Combinator application)
@@ -108,11 +88,6 @@ Respond ONLY as JSON in this exact format, nothing else:
 
 
 def suggest_funding_paths(extracted: dict, viability: dict) -> dict:
-    """
-    Suggests realistic funding paths (angel, VC, grant, bootstrap)
-    with a one-line reason for each, based on the idea's industry,
-    business model, and viability score.
-    """
     prompt = f"""
 Based on this startup idea, suggest the most realistic funding path(s)
 from these options: Angel Investor, Venture Capital, Government Grant,
