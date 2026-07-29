@@ -274,52 +274,6 @@ Developed as part of the Infosys Springboard Virtual Internship.
 
 ---
 
-## Current Project Status
-
-This project follows a 4-milestone plan (see `docs/project_statement.md` for the full official brief). Based on that plan, the team is currently ahead of schedule: work originally scoped for Milestones 1 through 3 is already implemented.
-
-### Milestone 1 (Idea Submission + Web Search Agent) — Complete
-
-- Startup Idea Submission interface (Streamlit)
-- Structured idea extraction using an LLM (Idea Extraction, within the Orchestrator)
-- Web Search Agent integrated using DuckDuckGo (in place of Tavily, per team decision)
-
-### Milestone 2 (Market Analysis + Competitor Agent + Orchestration) — Complete
-
-- Market Opportunity and Customer Segmentation Analysis Agent
-- Competitor Discovery and Comparison Agent
-- Orchestrator Agent with sequential pipeline execution and Shared State context passing
-- Validated across multiple sample startup ideas
-
-### Milestone 3 (SWOT + MVP + GTM + Conversational Advisor) — Complete
-
-- SWOT and Risk Analysis Agent
-- MVP Feature Recommendation Agent
-- Go-To-Market Strategy generation
-- Conversational Advisor Agent for follow-up questions
-
-### Milestone 4 (Report Generation + Testing + Documentation) — In Progress
-
-- Report Generation Agent — implemented, currently Markdown output only
-- End-to-end testing across all agents — done informally via command-line and Streamlit runs; no formal test suite yet
-- PDF, DOC, and HTML report export — not yet implemented
-- Technical documentation — this README and the accompanying project explanation document
-
-### Additional differentiator features (beyond the official brief)
-
-- Viability Score module (0-100 score combining idea clarity, competition, market, and risk signals)
-- Insight Layer: Blind Spot Finder, Honest Summary, Elevator Pitch Generator, Funding Suggestions
-
-### Not yet started (future work, beyond current milestones)
-
-- LangChain-based orchestration (currently a custom Python orchestrator)
-- PostgreSQL integration
-- Vector database and file storage
-- Docker deployment
-- Formal automated test suite
-
----
-
 ## License
 
 This project is developed for educational, research, and demonstration purposes as part of the Infosys Springboard Virtual Internship.
