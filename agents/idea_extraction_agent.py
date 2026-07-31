@@ -1,9 +1,8 @@
 """
 Idea Extraction Agent
 ------------------------
-Extracts structured information from the user's raw startup idea text.
-(Moved from the original extraction_agent.py into agents/, per the
-architecture doc's folder structure.)
+Extracts structured information from the user's raw startup idea text,
+including a location/region field (new - per mentor feedback).
 """
 
 from groq import Groq
@@ -16,7 +15,10 @@ client = Groq(api_key=GROQ_API_KEY)
 def extract_idea(raw_idea: str) -> dict:
     prompt = f"""Extract the following structured fields from this startup idea.
 Return ONLY valid JSON, no markdown, no explanation.
-Fields: idea_name, problem, solution, target_customer, industry, business_model
+Fields: idea_name, problem, solution, target_customer, industry, business_model, location
+For "location": if the idea mentions a specific country, city, or region, use that.
+If no location is mentioned, infer the most likely target market based on context,
+or use "Global" if truly unclear.
 Startup idea: "{raw_idea}"
 """
     response = client.chat.completions.create(

@@ -1,26 +1,40 @@
 """
-Competitor Agent
--------------------
-Analyzes competitors found by the Web Search Agent, comparing
-strengths/weaknesses and identifying market gaps.
+Competitor Agent (Deep Search version)
+-------------------------------------------
+Now runs its own targeted deep search specifically for named
+competitors, instead of only reusing the Web Search Agent's
+general market/competitor results.
 """
 
 import json
 from agents.idea_extraction_agent import client
 from app.config import MODEL_NAME
+from tools.deep_search import deep_search
 
 
 def analyze_competitors(extracted: dict, search_results: dict) -> dict:
-    results = search_results.get("results", [])[:5]
-    context = [{"title": r.get("title", ""), "content": r.get("content", "")[:150]} for r in results]
+    idea_name = extracted.get("idea_name", "")
+    industry = extracted.get("industry", "")
+    location = extracted.get("location", "Global")
+
+    primary_query = f"top competitors {idea_name} {industry} {location}"
+    fallback_query = f"companies similar to {industry} startups {location}"
+    competitor_search_results = deep_search(primary_query, fallback_query)
+
+    context = [
+        {"title": r.get("title", ""), "content": r.get("snippet", "")[:150]}
+        for r in competitor_search_results
+    ]
 
     prompt = f"""
 You are a competitive analyst. Based on this startup idea and the
-search results below, identify likely competitors and market gaps.
+targeted competitor search results below, identify likely competitors
+and market gaps.
 
-Idea: {extracted.get('idea_name')}
+Idea: {idea_name}
 Solution: {extracted.get('solution')}
-Search context: {json.dumps(context)}
+Location/Market: {location}
+Competitor search context: {json.dumps(context)}
 
 Return ONLY valid JSON with this format:
 {{
@@ -40,6 +54,12 @@ plausible competitor types instead (e.g. "established players in X category").
     text = response.choices[0].message.content.strip()
     text = text.replace("```json", "").replace("```", "")
     try:
-        return json.loads(text)
+        result = json.loads(text)
     except json.JSONDecodeError:
-        return {"competitors": [], "market_gap": text}
+        result = {"competitors": [], "market_gap": text}
+
+    result["competitor_search_sources"] = [
+        {"title": r.get("title", ""), "url": r.get("url", "")}
+        for r in competitor_search_results[:5]
+    ]
+    return result
