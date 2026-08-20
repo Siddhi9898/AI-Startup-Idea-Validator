@@ -1,8 +1,8 @@
 """
-Shared State / Memory
------------------------
-Centralized state object passed between agents during the
-validation pipeline, as described in docs/architecture.md.
+Shared Context / State
+--------------------------
+Centralized context object. Added quick_summary field for the new
+Summary Agent (fixes P2).
 """
 
 
@@ -22,6 +22,11 @@ class SharedState:
         self.elevator_pitch: dict = {}
         self.funding_suggestions: list = []
         self.report: str = ""
+        self.quick_summary: str = ""
+        self.execution_log: list = []
+
+    def log_step(self, step_name: str, is_valid: bool, note: str = ""):
+        self.execution_log.append({"step": step_name, "is_valid": is_valid, "note": note})
 
     def to_dict(self) -> dict:
         return {
@@ -39,4 +44,6 @@ class SharedState:
             "elevator_pitch": self.elevator_pitch,
             "funding_suggestions": self.funding_suggestions,
             "report": self.report,
+            "quick_summary": self.quick_summary,
+            "execution_log": self.execution_log,
         }

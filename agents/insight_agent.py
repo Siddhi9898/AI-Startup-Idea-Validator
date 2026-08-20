@@ -15,7 +15,7 @@ def _call_llm(prompt: str) -> str:
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.4,
+        temperature=0.0,  # deterministic per reviewer instruction
     )
     return response.choices[0].message.content.strip()
 

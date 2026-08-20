@@ -207,7 +207,8 @@ Note: API keys are stored locally in a `.env` file, which is excluded from GitHu
 
 ```bash
 git clone https://github.com/Siddhi9898/AI-Startup-Idea-Validator.git
-cd AI-Startup-Idea-Validator
+
+cd AI startup Idea Validator
 ```
 
 ### 2. Create a Virtual Environment
