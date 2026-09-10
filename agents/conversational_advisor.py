@@ -9,6 +9,18 @@ to maintain a growing list of message dicts (history = [{"role":
 the model on every call, so it has real memory of the conversation
 so far.
 
+BUGFIX: the advisor was silently failing to answer. The previous
+version ran the ENTIRE function - including all st.session_state
+reads/writes - inside a worker thread via run_with_timeout(). Only
+the main Streamlit script thread has a valid ScriptRunContext;
+touching st.session_state from a background thread is unreliable
+(it can silently no-op or raise), so the history was never actually
+being populated with the model's answer, which is why the advisor
+looked like it "wasn't giving an answer". The fix: keep every
+st.session_state read/write on the main thread, and ONLY put the
+actual network call (the slow, potentially-hanging part) inside the
+timeout-guarded worker thread.
+
 The UI call signature is unchanged: ask_advisor(question, result).
 History is maintained internally via Streamlit's session_state, so
 nothing in the UI needs to change to get real multi-turn memory.
@@ -20,7 +32,20 @@ from app.config import MODEL_NAME
 from tools.timeout_utils import run_with_timeout
 
 _HISTORY_KEY = "advisor_llm_history"
-_IDEA_KEY = "advisor_llm_idea_name"  # tracks which idea the stored history belongs to
+
+
+def _call_llm_only(history: list) -> str:
+    """
+    The ONLY part of the advisor flow allowed to run inside the
+    timeout-guarded worker thread - a plain network call with no
+    Streamlit session_state access at all.
+    """
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=history,
+        temperature=0.0,  # deterministic per reviewer instruction
+    )
+    return response.choices[0].message.content.strip()
 
 
 def _build_system_context(state_dict: dict) -> dict:
@@ -42,64 +67,30 @@ the founder to repeat information already given.
     return {"role": "system", "content": context}
 
 
-def _call_llm(messages: list) -> str:
-    """
-    PURE network call - this is the part that gets handed off to a
-    worker thread by run_with_timeout(). It must never touch
-    st.session_state or any other Streamlit API.
-
-    Why: Streamlit's session_state is only accessible from the thread
-    that is actually running the script (it needs a ScriptRunContext
-    to know which browser session it belongs to). A ThreadPoolExecutor
-    worker thread doesn't have that context, so any session_state
-    read/write inside it either raises or silently no-ops. That was
-    the real bug here - the old version read AND wrote
-    st.session_state from inside the timed-out thread, so the
-    advisor's answer could be generated successfully by the LLM and
-    still never show up in the chat (or get eaten by the except
-    Exception fallback). Keeping this function to "messages in,
-    string out" fixes that at the source.
-    """
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=messages,
-        temperature=0.0,  # deterministic per reviewer instruction
-    )
-    return response.choices[0].message.content.strip()
-
-
 def ask_advisor(question: str, state_dict: dict) -> str:
-    idea_name = state_dict.get("extracted", {}).get("idea_name", "")
-
-    # Start a fresh conversation if there's no history yet, OR if the
-    # idea behind the current report has changed since the last
-    # question. This is a safety net on top of reset_advisor_memory():
-    # even if something forgets to call that explicitly, the advisor
-    # will never silently answer using a different idea's context.
-    if _HISTORY_KEY not in st.session_state or st.session_state.get(_IDEA_KEY) != idea_name:
+    # Initialize + mutate history on the MAIN thread only.
+    if _HISTORY_KEY not in st.session_state:
         st.session_state[_HISTORY_KEY] = [_build_system_context(state_dict)]
-        st.session_state[_IDEA_KEY] = idea_name
 
     history = st.session_state[_HISTORY_KEY]
     history.append({"role": "user", "content": question})
 
-    # Send a COPY of the full history to the worker thread every time -
-    # that's what gives the model real multi-turn memory. session_state
-    # itself is only read/written here, on the main thread.
     try:
-        answer = run_with_timeout(_call_llm, args=(list(history),), timeout_seconds=20.0)
+        # Only the network call runs in the timeout-guarded thread -
+        # it receives a plain list (a snapshot), not st.session_state
+        # itself, so there's no cross-thread session access at all.
+        answer = run_with_timeout(
+            _call_llm_only, args=(list(history),), timeout_seconds=20.0
+        )
     except Exception as e:
-        # Roll back the user turn we just added so a failed question
-        # doesn't leave a dangling, unanswered entry in the stored
-        # conversation (and so the founder can just retry cleanly).
-        history.pop()
+        answer = f"Sorry, I couldn't get an answer right now (possible connection issue: {e}). Please try again."
+        # Don't leave a dangling user turn with no reply in history.
+        history.append({"role": "assistant", "content": answer})
         st.session_state[_HISTORY_KEY] = history
-        return f"Sorry, I couldn't get an answer right now (possible connection issue: {e}). Please try again."
+        return answer
 
     # Save the model's answer into history too, so the NEXT question
-    # has access to it - this is what makes multi-turn memory work.
-    # It also persists in st.session_state until the idea changes
-    # (handled above) or the page is refreshed (a new session).
+    # has access to it - this is what makes multi-turn memory work
     history.append({"role": "assistant", "content": answer})
     st.session_state[_HISTORY_KEY] = history
 
@@ -111,5 +102,3 @@ def reset_advisor_memory():
     carry over context from a previous, unrelated idea."""
     if _HISTORY_KEY in st.session_state:
         del st.session_state[_HISTORY_KEY]
-    if _IDEA_KEY in st.session_state:
-        del st.session_state[_IDEA_KEY]

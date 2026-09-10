@@ -32,7 +32,7 @@ import logging
 from models import CompetitorResearch
 from tools.llm_tool import LLMTool
 from tools.duckduckgo_tool import DuckDuckGoTool
-from tools.validators import filter_relevant_results
+from tools.validators import filter_relevant_results_with_fallback
 
 logger = logging.getLogger("agents.competitor_agent")
 
@@ -95,7 +95,7 @@ class CompetitorResearchAgent:
         for sr in search_responses:
             for hit in sr.hits:
                 all_hits.append({"title": hit.get("title", ""), "content": hit.get("snippet", ""), "url": hit.get("url", "")})
-        relevant_hits = filter_relevant_results(extracted, all_hits)
+        relevant_hits = filter_relevant_results_with_fallback(extracted, all_hits, min_relevance=0.20, min_results=6)
 
         if not relevant_hits:
             logger.info("[%s] No relevant search results found after filtering", self.NAME)
@@ -105,7 +105,7 @@ class CompetitorResearchAgent:
             )
 
         search_context = "\n".join(
-            f"- {h['title']}: {h['content'][:150]} ({h['url']})" for h in relevant_hits[:8]
+            f"- {h['title']}: {h['content'][:300]} ({h['url']})" for h in relevant_hits[:10]
         )
 
         user_prompt = (

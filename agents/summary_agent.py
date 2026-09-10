@@ -1,113 +1,92 @@
 """
 Summary Agent
 ----------------
-Condenses the full validation run into ONE scannable executive
-summary up front, so the founder isn't forced to read every single
-agent's full output to piece the picture together.
+Fixes P2: instead of making the founder read every single agent's
+full output to piece together the picture, this condenses everything
+into one up-front summary. Deterministic facts are pulled directly
+from already-computed data across EVERY agent (not just viability/
+competitors/swot/mvp as before); the LLM is used only to phrase them
+into readable prose - not to invent new analysis.
 
-Previously this only pulled 5 facts (score, verdict, competitor
-count, top weakness, top MVP feature) into a single 3-4 sentence
-paragraph - which meant market size, growth trend, competitive
-intensity, GTM positioning, funding path, and most of the SWOT never
-made it into the summary at all. This version pulls from every
-agent's output and organizes it into labeled sections, so the
-summary is genuinely comprehensive while still being quick to scan
-(it's headers + short bullets, not a wall of text).
-
-Every fact below is pulled directly from already-computed data; the
-LLM is only used to phrase them into readable prose - never to
-invent new analysis or numbers it wasn't given.
+Update: the summary was judged "too thin" - it only ever pulled from
+4 of the ~10 agents' outputs. It now also draws on market analysis
+(growth trend, market size), GTM positioning, the elevator pitch,
+funding suggestions, and blind spots, and produces a fuller
+paragraph (6-8 sentences) covering idea, market, competition, risk,
+what to build first, how to go to market, and how to fund it -
+still strictly grounded in already-computed facts, nothing invented.
 """
 
 from agents.idea_extraction_agent import client
 from app.config import MODEL_NAME
 
 
-def _top(items, n=2, default="none identified"):
-    items = items or []
-    return items[:n] if items else [default]
+def _gather_facts(state_dict: dict) -> dict:
+    extracted = state_dict.get("extracted", {})
+    viability = state_dict.get("viability_score", {})
+    competitors = state_dict.get("competitors", {})
+    swot = state_dict.get("swot", {})
+    mvp = state_dict.get("mvp", {})
+    market = state_dict.get("market_analysis", {})
+    gtm = state_dict.get("gtm", {})
+    pitch = state_dict.get("elevator_pitch", {})
+    funding = state_dict.get("funding_suggestions", [])
+    blind_spots = state_dict.get("blind_spots", [])
+
+    # Deterministic facts pulled from EVERY already-computed agent
+    # output - nothing here is invented, just gathered.
+    return {
+        "idea_name": extracted.get("idea_name", "this idea"),
+        "industry": extracted.get("industry", ""),
+        "score": viability.get("overall_score"),
+        "verdict": viability.get("verdict"),
+        "competitor_count": len(competitors.get("competitors", [])),
+        "market_gap": competitors.get("market_gap", ""),
+        "growth_trend": market.get("growth_trend", ""),
+        "market_size_score": market.get("market_size_score"),
+        "top_strength": (swot.get("strengths") or ["none identified"])[0],
+        "top_weakness": (swot.get("weaknesses") or ["none identified"])[0],
+        "risk_score": swot.get("risk_score"),
+        "top_mvp_feature": (mvp.get("mvp_features") or [{}])[0].get("feature", "not determined"),
+        "mvp_timeline": mvp.get("estimated_timeline", ""),
+        "positioning": gtm.get("positioning_statement", ""),
+        "pricing_strategy": gtm.get("pricing_strategy", ""),
+        "tagline": pitch.get("tagline", ""),
+        "top_funding_path": (funding[0].get("funding_type") if funding else "not determined"),
+        "blind_spot_count": len(blind_spots),
+    }
 
 
 def generate_quick_summary(state_dict: dict) -> str:
-    extracted = state_dict.get("extracted", {})
-    viability = state_dict.get("viability_score", {})
-    market = state_dict.get("market_analysis", {})
-    competitors_data = state_dict.get("competitors", {})
-    swot = state_dict.get("swot", {})
-    mvp = state_dict.get("mvp", {})
-    gtm = state_dict.get("gtm", {})
-    funding = state_dict.get("funding_suggestions", [])
-    blind_spots = state_dict.get("blind_spots", [])
-    elevator = state_dict.get("elevator_pitch", {}) or {}
-
-    breakdown = viability.get("breakdown", {})
-    competitors_list = competitors_data.get("competitors", [])
-    mvp_features = mvp.get("mvp_features", [])
-
-    # Deterministic facts pulled directly from already-computed agent
-    # outputs - the LLM only phrases these, it doesn't add to them.
-    facts = {
-        "idea_name": extracted.get("idea_name", "This idea"),
-        "score": viability.get("overall_score"),
-        "verdict": viability.get("verdict"),
-        "breakdown": breakdown,
-        "market_size_score": market.get("market_size_score"),
-        "growth_trend": market.get("growth_trend"),
-        "customer_segments": _top(market.get("customer_segments"), 2, "not determined"),
-        "competitor_count": len(competitors_list),
-        "top_competitors": [c.get("name") for c in competitors_list[:2] if c.get("name")],
-        "market_gap": competitors_data.get("market_gap"),
-        "competitive_intensity": competitors_data.get("competitive_intensity"),
-        "top_strengths": _top(swot.get("strengths"), 2),
-        "top_weaknesses": _top(swot.get("weaknesses"), 2),
-        "top_opportunities": _top(swot.get("opportunities"), 1),
-        "top_threat": _top(swot.get("threats"), 1),
-        "risk_score": swot.get("risk_score"),
-        "top_mvp_features": [f.get("feature") for f in mvp_features[:3] if f.get("feature")],
-        "mvp_timeline": mvp.get("estimated_timeline"),
-        "positioning": gtm.get("positioning_statement"),
-        "top_channel": (gtm.get("marketing_channels") or ["not determined"])[0],
-        "pricing_strategy": gtm.get("pricing_strategy"),
-        "funding_pick": funding[0] if funding else None,
-        "blind_spot_count": len(blind_spots),
-        "tagline": elevator.get("tagline"),
-    }
+    facts = _gather_facts(state_dict)
 
     prompt = f"""
-Write a scannable executive summary of this startup validation for a
-busy founder. Use ONLY the facts below - do not add new analysis,
-numbers, or claims beyond what's given. If a fact is missing or says
-"not determined", either omit it gracefully or say it's not yet
-determined - never invent a substitute.
+Write a clear, scannable summary (6-8 sentences, one paragraph) of
+this startup validation, using ONLY the facts below - do not add
+new analysis, numbers, or claims beyond what's given here. Cover, in
+order: (1) what the idea is and its viability verdict, (2) what the
+market/competitive picture looks like, (3) the single biggest
+strength and biggest weakness, (4) what to build first and roughly
+how long it takes, (5) the recommended go-to-market angle, and (6)
+the most realistic funding path. End with how many open questions
+("blind spots") the founder still needs to answer.
 
-Format it with these short bold section headers, each followed by
-1-3 sentences or bullet points (not long paragraphs):
+Idea: {facts['idea_name']} ({facts['industry']})
+Viability Score: {facts['score']}/100 - {facts['verdict']}
+Competitors found: {facts['competitor_count']} | Market gap note: {facts['market_gap']}
+Market growth trend: {facts['growth_trend']} | Market size score: {facts['market_size_score']}/10
+Top strength: {facts['top_strength']}
+Top weakness: {facts['top_weakness']}
+Risk score: {facts['risk_score']}/10
+Top MVP priority: {facts['top_mvp_feature']} | Estimated build time: {facts['mvp_timeline']}
+GTM positioning: {facts['positioning']} | Pricing approach: {facts['pricing_strategy']}
+Tagline: {facts['tagline']}
+Most realistic funding path: {facts['top_funding_path']}
+Number of unresolved blind spots: {facts['blind_spot_count']}
 
-**Bottom Line** - overall score/verdict and whether this is worth pursuing
-**Market & Competition** - market size score, growth trend, competitor count, competitive intensity, market gap
-**Strengths & Weaknesses** - top strengths and weaknesses from the SWOT, plus the risk score
-**Next Steps** - top MVP features + timeline, GTM positioning + main channel, and the recommended funding path
-
-Facts:
-- Idea: {facts['idea_name']} ({facts['tagline'] or 'no tagline'})
-- Viability Score: {facts['score']}/100 - {facts['verdict']}
-- Score breakdown: {facts['breakdown']}
-- Market size score: {facts['market_size_score']} | Growth trend: {facts['growth_trend']}
-- Customer segments: {', '.join(facts['customer_segments'])}
-- Competitors found: {facts['competitor_count']} (e.g. {', '.join(facts['top_competitors']) or 'none named'})
-- Competitive intensity: {facts['competitive_intensity']} | Market gap: {facts['market_gap']}
-- Top strengths: {', '.join(facts['top_strengths'])}
-- Top weaknesses: {', '.join(facts['top_weaknesses'])}
-- Top opportunity: {', '.join(facts['top_opportunities'])}
-- Top threat: {', '.join(facts['top_threat'])}
-- Risk score (0-10, higher = lower risk): {facts['risk_score']}
-- Top MVP features to build first: {', '.join(facts['top_mvp_features']) or 'not determined'}
-- Estimated MVP timeline: {facts['mvp_timeline']}
-- GTM positioning: {facts['positioning']}
-- Main marketing channel: {facts['top_channel']}
-- Pricing strategy: {facts['pricing_strategy']}
-- Recommended funding path: {facts['funding_pick']}
-- Unaddressed blind spots flagged: {facts['blind_spot_count']}
+Write it as a briefing a busy founder could read in under 30 seconds
+instead of reading every section below, but dense enough that they
+walk away actually informed, not just reassured.
 """
     try:
         response = client.chat.completions.create(
@@ -117,27 +96,16 @@ Facts:
         )
         return response.choices[0].message.content.strip()
     except Exception:
-        # Deterministic fallback if the LLM call fails - still
-        # covers every section above, just without LLM phrasing.
-        lines = [
-            f"**Bottom Line**: {facts['score']}/100 ({facts['verdict']}) for {facts['idea_name']}.",
-            "",
-            "**Market & Competition**: "
-            f"Market size score {facts['market_size_score']}, growth trend: {facts['growth_trend']}. "
-            f"{facts['competitor_count']} competitors found "
-            f"({', '.join(facts['top_competitors']) or 'none named'}), "
-            f"competitive intensity: {facts['competitive_intensity']}. "
-            f"Market gap: {facts['market_gap']}.",
-            "",
-            "**Strengths & Weaknesses**: "
-            f"Strengths - {', '.join(facts['top_strengths'])}. "
-            f"Weaknesses - {', '.join(facts['top_weaknesses'])}. "
-            f"Risk score: {facts['risk_score']}/10.",
-            "",
-            "**Next Steps**: "
-            f"Build first - {', '.join(facts['top_mvp_features']) or 'not determined'} "
-            f"(timeline: {facts['mvp_timeline']}). "
-            f"GTM: {facts['positioning']} via {facts['top_channel']}. "
-            f"Funding path: {facts['funding_pick']}.",
-        ]
-        return "\n".join(lines)
+        # Deterministic fallback if the LLM call fails - still pulls
+        # from every agent, just without LLM phrasing.
+        return (
+            f"{facts['idea_name']} ({facts['industry']}) scored {facts['score']}/100 "
+            f"({facts['verdict']}). {facts['competitor_count']} competitors found; "
+            f"market growth trend: {facts['growth_trend'] or 'not determined'}. "
+            f"Top strength: {facts['top_strength']}. Top weakness: {facts['top_weakness']} "
+            f"(risk score {facts['risk_score']}/10). "
+            f"Build first: {facts['top_mvp_feature']} ({facts['mvp_timeline']}). "
+            f"GTM: {facts['positioning'] or 'not determined'}. "
+            f"Most realistic funding path: {facts['top_funding_path']}. "
+            f"{facts['blind_spot_count']} open blind spot(s) remain."
+        )

@@ -9,7 +9,7 @@ sentence, strictly grounded in the retrieved snippets it is given -
 never asked to estimate figures it has no real data for.
 """
 
-from tools.validators import filter_relevant_results, validate_search_results
+from tools.validators import filter_relevant_results_with_fallback, validate_search_results
 from agents.idea_extraction_agent import client
 from app.config import MODEL_NAME
 
@@ -50,7 +50,10 @@ def analyze_market(extracted: dict, search_results: dict) -> dict:
     raw_results = search_results.get("results", [])
     validation = validate_search_results(raw_results)
 
-    relevant = filter_relevant_results(extracted, raw_results) if validation["is_valid"] else []
+    relevant = (
+        filter_relevant_results_with_fallback(extracted, raw_results, min_relevance=0.20, min_results=4)
+        if validation["is_valid"] else []
+    )
 
     # Deterministic scoring - no LLM call for the number itself
     market_size_score = _deterministic_market_size_score(relevant, len(raw_results))
@@ -70,7 +73,7 @@ def analyze_market(extracted: dict, search_results: dict) -> dict:
     # LLM used ONLY to phrase a growth trend description, strictly
     # grounded in retrieved snippets - explicitly told not to invent
     # numbers it wasn't given.
-    context_snippets = [f"{r.get('title', '')}: {r.get('content', '')[:150]}" for r in relevant[:3]]
+    context_snippets = [f"{r.get('title', '')}: {r.get('content', '')[:300]}" for r in relevant[:6]]
     prompt = f"""
 Based ONLY on the retrieved information below, write one sentence
 describing the market/industry trend relevant to this startup idea.
