@@ -49,10 +49,13 @@ def render_floating_assistant(result: dict):
         st.caption("Remembers earlier questions in this session.")
 
         from agents.conversational_advisor import ask_advisor, _HISTORY_KEY
-        from tools.advisor_chat_ui import render_advisor_history
 
         if _HISTORY_KEY in st.session_state:
-            render_advisor_history(st.session_state[_HISTORY_KEY])
+            for msg in st.session_state[_HISTORY_KEY]:
+                if msg["role"] == "user":
+                    st.write(f"**You:** {msg['content']}")
+                elif msg["role"] == "assistant":
+                    st.write(f"**Advisor:** {msg['content']}")
 
         with st.form(key="floating_advisor_form", clear_on_submit=True):
             question = st.text_input("Your question:", label_visibility="collapsed", placeholder="Ask about your report...")
