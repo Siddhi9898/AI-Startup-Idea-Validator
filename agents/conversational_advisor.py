@@ -133,6 +133,11 @@ Idea: {state_dict.get('extracted', {}).get('idea_name', '')}
 Viability Score: {state_dict.get('viability_score', {}).get('overall_score', '')}/100
 Honest Summary: {state_dict.get('honest_summary', '')}
 Blind Spots: {state_dict.get('blind_spots', [])}
+
+Answer the founder's follow-up questions directly and concisely,
+using this report as context. Remember earlier questions and
+answers in this conversation when answering new ones - do not ask
+the founder to repeat information already given.
 """
     if chat_summary:
         context += f"\nSummary of earlier conversation with this founder:\n{chat_summary}\n"

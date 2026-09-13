@@ -144,7 +144,6 @@ def filter_relevant_results_with_fallback(
 
     return strict
 
-
 def validate_extracted_idea(extracted: dict) -> dict:
     required = ["idea_name", "problem", "solution", "target_customer", "industry", "business_model"]
     missing = [f for f in required if not extracted.get(f) or not str(extracted.get(f)).strip()]
