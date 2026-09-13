@@ -1,7 +1,10 @@
 """
-Streamlit UI - Tabs Navigation (fixes remaining light-mode contrast
-issues on tabs/radio labels, fixes $ rendering bug, makes Budget
-currency-neutral)
+Streamlit UI - Tabs Navigation
+Fixes: P1 (prominent download), P2 (quick summary), P3 (parallel
+speed-up in orchestrator), P4 (full alphabetical location dropdowns
++ real GPS), P5/P10 (timeouts), P7/P8 (form-based follow-up),
+P9 (dead link filtering), P11 (input validation), P12 (plausibility),
+P13 (sensitive content), plus a working floating chat icon.
 """
 
 import sys
@@ -12,13 +15,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 from app.orchestrator import run_pipeline
+from tools.input_validator import validate_idea_text, check_sensitive_content, check_plausibility
+from tools.location_data import ALL_COUNTRIES, COUNTRY_STATES, STATE_CITIES, get_gps_location
+from tools.timeout_utils import run_with_timeout, OperationTimedOut
+from tools.pdf_generator import build_report_pdf
+from db import database
 
 st.set_page_config(page_title="AI Startup Idea Validator", layout="wide")
 
+if "db_ready" not in st.session_state:
+    st.session_state.db_ready = database.init_db()
+
 if "theme" not in st.session_state:
     st.session_state.theme = "Dark"
-if "history" not in st.session_state:
-    st.session_state.history = []
 
 theme_choice = st.sidebar.radio("Theme", ["Dark", "Light"], index=0 if st.session_state.theme == "Dark" else 1)
 st.session_state.theme = theme_choice
@@ -34,27 +43,21 @@ if theme_choice == "Light":
         }
         textarea::placeholder, input::placeholder { color: #666666 !important; opacity: 1 !important; }
         label, .stTextArea label, .stTextInput label, .stSelectbox label,
-        p, span, div {
-            color: #000000;
-        }
+        p, span, div { color: #000000; }
         div[data-baseweb="select"] > div {
             background-color: #FFFFFF !important; color: #000000 !important;
             border: 1px solid #888888 !important;
         }
         div[data-baseweb="select"] span { color: #000000 !important; }
-        .stButton > button {
+        .stButton > button, .stButton > button *,
+        button[data-testid="stBaseButton-secondary"], button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primary"] * {
             background-color: #1F2937 !important; color: #FFFFFF !important;
             border: 1px solid #1F2937 !important;
         }
-        .stButton > button:hover { background-color: #374151 !important; color: #FFFFFF !important; }
         section[data-testid="stSidebar"] { background-color: #F5F5F5 !important; }
         section[data-testid="stSidebar"] * { color: #000000 !important; }
-
-        /* Radio button options (Theme: Dark/Light) */
         div[data-testid="stRadio"] label p { color: #000000 !important; }
-        div[data-testid="stRadio"] label div[data-baseweb="radio"] { color: #000000 !important; }
-
-        /* Tab bar labels - these were invisible before */
         button[data-baseweb="tab"] { color: #000000 !important; }
         button[data-baseweb="tab"] p { color: #000000 !important; }
         button[aria-selected="true"] { color: #6D28D9 !important; }
@@ -74,22 +77,20 @@ else:
         }
         textarea::placeholder, input::placeholder { color: #AAAAAA !important; opacity: 1 !important; }
         label, .stTextArea label, .stTextInput label, .stSelectbox label,
-        p, span, div {
-            color: #FAFAFA;
-        }
+        p, span, div { color: #FAFAFA; }
         div[data-baseweb="select"] > div {
             background-color: #262730 !important; color: #FAFAFA !important;
             border: 1px solid #444444 !important;
         }
         div[data-baseweb="select"] span { color: #FAFAFA !important; }
-        .stButton > button {
+        .stButton > button, .stButton > button *,
+        button[data-testid="stBaseButton-secondary"], button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primary"] * {
             background-color: #FAFAFA !important; color: #0E1117 !important;
             border: 1px solid #FAFAFA !important;
         }
-        .stButton > button:hover { background-color: #DDDDDD !important; color: #0E1117 !important; }
         section[data-testid="stSidebar"] { background-color: #161A25 !important; }
         section[data-testid="stSidebar"] * { color: #FAFAFA !important; }
-
         div[data-testid="stRadio"] label p { color: #FAFAFA !important; }
         button[data-baseweb="tab"] { color: #FAFAFA !important; }
         button[data-baseweb="tab"] p { color: #FAFAFA !important; }
@@ -103,13 +104,6 @@ else:
 st.title("AI Startup Idea Validator")
 st.caption("Multi-Agent Startup Validation Platform")
 
-COUNTRIES = [
-    "India", "United States", "United Kingdom", "Canada", "Australia",
-    "Germany", "France", "Singapore", "United Arab Emirates", "Japan",
-    "Brazil", "South Africa", "Global", "Other",
-]
-# Currency-neutral budget brackets (avoids $ sign - both fixes the
-# LaTeX rendering bug and makes sense for non-US founders too)
 BUDGET_RANGES = [
     "Bootstrap (very small budget)",
     "Seed stage (small funding raised)",
@@ -125,45 +119,108 @@ with col_a:
         height=100,
         help="Write a real, coherent business idea.",
     )
-    budget = st.selectbox(
-        "Expected Budget",
-        BUDGET_RANGES,
-        help="How much funding you realistically have to build and launch this idea. Used to tailor MVP and go-to-market advice.",
-    )
-with col_b:
-    country = st.selectbox("Target Market - Country (required)", COUNTRIES)
-    state_input = st.text_input("State (optional)")
-    city_input = st.text_input("City / Town (optional)")
-    timeline = st.selectbox("Launch Timeline", TIMELINES)
+    budget = st.selectbox("Expected Budget", BUDGET_RANGES)
 
-location_parts = [p for p in [city_input.strip(), state_input.strip(), country] if p]
-target_market = ", ".join(location_parts)
+with col_b:
+    st.write("**Location**")
+    use_gps = st.checkbox("Use my current location (GPS)")
+
+    if use_gps:
+        gps = get_gps_location()
+        if gps:
+            st.success(f"Detected: lat {gps['latitude']:.4f}, lon {gps['longitude']:.4f}")
+            target_market = f"lat {gps['latitude']:.4f}, lon {gps['longitude']:.4f}"
+            country = state_input = city_input = ""
+        else:
+            st.info("Waiting for browser location permission...")
+            target_market = ""
+            country = state_input = city_input = ""
+    else:
+        country = st.selectbox("Country (required)", ALL_COUNTRIES)
+
+        if country in COUNTRY_STATES:
+            state_input = st.selectbox("State", COUNTRY_STATES[country])
+            state_input = "" if state_input in ("All States",) else state_input
+        else:
+            state_input = st.text_input("State (optional)", help="Full dropdown not available for this country yet - enter manually.")
+
+        if state_input and state_input in STATE_CITIES:
+            city_input = st.selectbox("City / Town", STATE_CITIES[state_input])
+            city_input = "" if city_input in ("All Cities/Towns",) else city_input
+        else:
+            city_input = st.text_input("City / Town (optional)")
+
+        location_parts = [p for p in [city_input.strip() if city_input else "", state_input.strip() if state_input else "", country if country != "All Countries" else ""] if p]
+        target_market = ", ".join(location_parts)
+
+    timeline = st.selectbox("Launch Timeline", TIMELINES)
 
 validate_clicked = st.button("Validate Idea")
 
 if validate_clicked:
-    if idea_text.strip() == "":
-        st.warning("Please enter an idea first.")
+    input_check = validate_idea_text(idea_text)
+    sensitive_check = check_sensitive_content(idea_text) if input_check["is_valid"] else {"is_sensitive": False}
+    plausibility_check = check_plausibility(idea_text) if input_check["is_valid"] else {"is_plausible": True}
+
+    if not input_check["is_valid"]:
+        st.session_state["result"] = {"invalid": True, "reason": input_check["reason"]}
+    elif sensitive_check.get("is_sensitive"):
+        st.session_state["result"] = {"invalid": True, "reason": sensitive_check["reason"]}
+    elif not plausibility_check.get("is_plausible", True):
+        st.session_state["result"] = {"invalid": True, "reason": plausibility_check["reason"]}
     else:
-        with st.spinner("Running multi-agent validation pipeline..."):
-            result = run_pipeline(idea_text, target_market)
-
-        if not result.get("invalid"):
-            result["_meta"] = {
-                "budget": budget,
-                "timeline": timeline,
-                "submitted_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            }
-            st.session_state.history.append(result)
-
-        st.session_state["result"] = result
+        try:
+            with st.spinner("Running multi-agent validation pipeline..."):
+                result = run_with_timeout(
+                    run_pipeline, args=(idea_text, target_market), timeout_seconds=45.0
+                )
+            if not result.get("invalid"):
+                meta = {
+                    "budget": budget,
+                    "timeline": timeline,
+                    "submitted_at": datetime.now(),
+                }
+                result["_meta"] = {**meta, "submitted_at": meta["submitted_at"].strftime("%Y-%m-%d %H:%M")}
+                # Persist to Postgres (fixes: history used to only live in
+                # st.session_state and vanished on refresh/new session).
+                # This call fails soft - a DB outage never blocks the
+                # already-computed result from being shown.
+                new_id = database.save_validation(result, meta)
+                st.session_state["current_validation_id"] = new_id
+                from agents.conversational_advisor import reset_advisor_memory
+                reset_advisor_memory()
+            st.session_state["result"] = result
+        except OperationTimedOut as e:
+            st.session_state["result"] = {"invalid": True, "reason": str(e)}
 
 if "result" in st.session_state:
     result = st.session_state["result"]
 
+    from tools.floating_chat_icon import render_floating_assistant
+    render_floating_assistant(result)
+
     if result.get("invalid"):
         st.error(result.get("reason", "Please enter a valid input."))
     else:
+        # P1 fix: prominent download button + quick summary shown
+        # IMMEDIATELY, before any tabs - no scrolling required.
+        st.divider()
+        top_col1, top_col2 = st.columns([3, 1])
+        with top_col1:
+            st.subheader("Quick Summary")
+            st.info(result.get("quick_summary", "Summary not available."))
+        with top_col2:
+            st.write("")
+            st.write("")
+            st.download_button(
+                "Download Full Report (PDF)",
+                data=build_report_pdf(result),
+                file_name=f"{result.get('extracted', {}).get('idea_name', 'validation') or 'validation'}_report.pdf",
+                mime="application/pdf",
+                key="top_download_button",
+            )
+        st.divider()
+
         tabs = st.tabs([
             "Idea", "Web Search", "Market Analysis", "Competitors",
             "SWOT & Risk", "MVP", "GTM Strategy", "Viability Score",
@@ -192,9 +249,6 @@ if "result" in st.session_state:
             st.write(f"**SOM:** {market.get('som_estimate', '')}")
             st.write(f"**Growth Trend:** {market.get('growth_trend', '')}")
             st.write(f"**Customer Segments:** {', '.join(market.get('customer_segments', []))}")
-            with st.expander("Market-specific search sources used (deep search)"):
-                for src in market.get("market_search_sources", []):
-                    st.write(f"- [{src.get('title', '')}]({src.get('url', '')})")
 
         with tabs[3]:
             st.subheader("Competitor Analysis")
@@ -264,46 +318,89 @@ if "result" in st.session_state:
             st.subheader("Full Validation Report")
             st.markdown(result["report"])
             st.download_button(
-                "Download Report (Markdown)",
-                data=result["report"],
-                file_name="validation_report.md",
-                mime="text/markdown",
+                "Download Report (PDF)",
+                data=build_report_pdf(result),
+                file_name=f"{result.get('extracted', {}).get('idea_name', 'validation') or 'validation'}_report.pdf",
+                mime="application/pdf",
+                key="bottom_download_button",
             )
 
         with tabs[10]:
             st.subheader("Ask a Follow-up Question")
-            followup = st.text_input(
-                "Ask the Conversational Advisor about this report:",
-                key="advisor_question",
-            )
-            if st.button("Ask Advisor"):
-                if followup.strip():
-                    from agents.conversational_advisor import ask_advisor
-                    with st.spinner("Thinking..."):
-                        answer = ask_advisor(followup, result)
-                    st.session_state["advisor_answer"] = answer
-                else:
-                    st.warning("Please type a question first.")
-            if "advisor_answer" in st.session_state:
-                st.write(st.session_state["advisor_answer"])
+            st.caption("This advisor remembers earlier questions in this conversation.")
+
+            from agents.conversational_advisor import _HISTORY_KEY
+            if _HISTORY_KEY in st.session_state:
+                for msg in st.session_state[_HISTORY_KEY]:
+                    if msg["role"] == "user":
+                        st.write(f"**You:** {msg['content']}")
+                    elif msg["role"] == "assistant":
+                        st.write(f"**Advisor:** {msg['content']}")
+
+            with st.form(key="advisor_form", clear_on_submit=True):
+                followup = st.text_input("Ask the Conversational Advisor about this report:")
+                submitted = st.form_submit_button("Ask Advisor")
+
+            if submitted and followup.strip():
+                from agents.conversational_advisor import ask_advisor
+                with st.spinner("Thinking..."):
+                    ask_advisor(followup, result, st.session_state.get("current_validation_id"))
+                st.rerun()
+            elif submitted:
+                st.warning("Please type a question first.")
 
         with tabs[11]:
             st.subheader("History")
-            if not st.session_state.history:
-                st.info("No validations yet this session.")
+            st.caption("Persisted in PostgreSQL - survives refreshes and new sessions.")
+            if not st.session_state.get("db_ready"):
+                st.warning(
+                    "Could not connect to the PostgreSQL database, so history can't be "
+                    "loaded or saved right now. Check your DB settings in `.env` "
+                    "(PG_HOST / PG_PORT / PG_DB / PG_USER / PG_PASSWORD or DATABASE_URL)."
+                )
             else:
-                for i, past in enumerate(reversed(st.session_state.history)):
-                    meta = past.get("_meta", {})
-                    idea_name = past.get("extracted", {}).get("idea_name", "Untitled Idea")
-                    score = past.get("viability_score", {}).get("overall_score", "N/A")
-                    with st.expander(f"{idea_name} - Score: {score}/100 - {meta.get('submitted_at', '')}"):
-                        st.write(f"**Budget:** {meta.get('budget', 'N/A')}")
-                        st.write(f"**Timeline:** {meta.get('timeline', 'N/A')}")
-                        st.write(f"**Location:** {past.get('extracted', {}).get('location', 'N/A')}")
-                        st.download_button(
-                            "Download this report",
-                            data=past.get("report", ""),
-                            file_name=f"{idea_name}_report.md",
-                            mime="text/markdown",
-                            key=f"history_download_{i}",
-                        )
+                past_validations = database.list_validations()
+                if not past_validations:
+                    st.info("No validations saved yet.")
+                else:
+                    for row in past_validations:
+                        score = row.get("viability_score")
+                        score_label = f"{score}/100" if score is not None else "N/A"
+                        submitted = row.get("submitted_at")
+                        submitted_label = submitted.strftime("%Y-%m-%d %H:%M") if submitted else ""
+                        with st.expander(f"{row['idea_name']} - Score: {score_label} - {submitted_label}"):
+                            st.write(f"**Verdict:** {row.get('verdict', 'N/A')}")
+                            st.write(f"**Budget:** {row.get('budget') or 'N/A'}")
+                            st.write(f"**Timeline:** {row.get('timeline') or 'N/A'}")
+                            st.write(f"**Location:** {row.get('target_market') or 'N/A'}")
+                            if row.get("quick_summary"):
+                                st.info(row["quick_summary"])
+
+                            chat_summary = database.get_chat_summary(row["id"])
+                            chat_messages = database.get_advisor_messages(row["id"])
+                            if chat_summary or chat_messages:
+                                with st.expander("Advisor Chat History", expanded=False):
+                                    if chat_summary:
+                                        st.caption("Summary of earlier conversation:")
+                                        st.write(chat_summary)
+                                    for msg in chat_messages:
+                                        if msg["role"] == "user":
+                                            st.write(f"**You:** {msg['content']}")
+                                        else:
+                                            st.write(f"**Advisor:** {msg['content']}")
+
+                            past_full = database.get_validation(row["id"])
+                            dl_col1, dl_col2 = st.columns(2)
+                            with dl_col1:
+                                if past_full:
+                                    st.download_button(
+                                        "Download PDF",
+                                        data=build_report_pdf(past_full),
+                                        file_name=f"{row['idea_name']}_report.pdf",
+                                        mime="application/pdf",
+                                        key=f"history_pdf_{row['id']}",
+                                    )
+                            with dl_col2:
+                                if st.button("Delete", key=f"history_delete_{row['id']}"):
+                                    database.delete_validation(row["id"])
+                                    st.rerun()
