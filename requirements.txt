@@ -7,3 +7,9 @@ requests
 pydantic
 reportlab
 psycopg2-binary
+<<<<<<< Updated upstream
+=======
+bcrypt
+plotly
+streamlit-js-eval
+>>>>>>> Stashed changes

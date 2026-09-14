@@ -21,6 +21,7 @@ class SharedState:
         self.honest_summary: str = ""
         self.elevator_pitch: dict = {}
         self.funding_suggestions: list = []
+        self.improvement_suggestions: list = []
         self.report: str = ""
         self.quick_summary: str = ""
         self.execution_log: list = []
@@ -43,6 +44,7 @@ class SharedState:
             "honest_summary": self.honest_summary,
             "elevator_pitch": self.elevator_pitch,
             "funding_suggestions": self.funding_suggestions,
+            "improvement_suggestions": self.improvement_suggestions,
             "report": self.report,
             "quick_summary": self.quick_summary,
             "execution_log": self.execution_log,
