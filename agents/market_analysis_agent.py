@@ -1,91 +1,106 @@
 """
-Market Analysis Agent (Deep Search version)
------------------------------------------------
-Instead of only reusing the Web Search Agent's shared results, this
-agent now runs its OWN targeted search specifically for market size
-and trend data, then does a follow-up "deep search" if the first
-result looks too generic. This gives more accurate, market-specific
-signal instead of leftover competitor search results.
+Market Analysis Agent (Deterministic)
+------------------------------------------
+Refactored per reviewer feedback: market_size_score is now computed
+deterministically from actual retrieved data (relevant result count,
+average relevance), instead of asking the LLM to invent a TAM/SAM/SOM
+number out of thin air. The LLM is used only to phrase a growth_trend
+sentence, strictly grounded in the retrieved snippets it is given -
+never asked to estimate figures it has no real data for.
 """
 
-import json
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web_search_agent"))
-
-from tools.duckduckgo_tool import DuckDuckGoTool
+from tools.validators import filter_relevant_results_with_fallback, validate_search_results
 from agents.idea_extraction_agent import client
 from app.config import MODEL_NAME
 
-_tool = DuckDuckGoTool()
 
-
-def _deep_search(industry: str, location: str) -> list:
+def _deterministic_market_size_score(relevant_results: list, total_results: int) -> float:
     """
-    Runs an initial market-specific search, then a refined follow-up
-    search if the first pass returned too few results - this is the
-    "deep search" pattern: search, check, search again if needed.
+    Deterministic scoring rule, no LLM involved:
+    - More relevant results found => more evidence of an active,
+      documented market => higher score (up to a point)
+    - Very high relevant count can also indicate saturation, so the
+      score plateaus rather than increasing indefinitely.
+    Identical input always produces identical output.
     """
-    query_1 = f"{industry} market size trends {location}"
-    results = _tool.search(query_1, max_results=5)
+    count = len(relevant_results)
+    if count == 0:
+        return 3.0  # no evidence found; conservative low-neutral score
+    if count <= 2:
+        return 5.0
+    if count <= 4:
+        return 7.0
+    return 8.0  # plateaus - more isn't necessarily better past this point
 
-    if len(results) < 2:
-        # First search too shallow - refine and try again
-        query_2 = f"{industry} industry growth report {location} 2026"
-        results += _tool.search(query_2, max_results=5)
 
-    return results
+def _deterministic_segments(extracted: dict) -> list:
+    """
+    Deterministic customer segment derivation directly from the
+    already-extracted target_customer field - no LLM invention.
+    """
+    target = extracted.get("target_customer", "")
+    if not target:
+        return []
+    # Split on common separators deterministically
+    parts = [p.strip() for p in target.replace(" and ", ",").split(",") if p.strip()]
+    return parts if parts else [target]
 
 
 def analyze_market(extracted: dict, search_results: dict) -> dict:
-    industry = extracted.get("industry", "")
-    location = extracted.get("location", "Global")
+    raw_results = search_results.get("results", [])
+    validation = validate_search_results(raw_results)
 
-    # Agent does its OWN targeted search, instead of only reusing
-    # the shared Web Search Agent results
-    market_search_results = _deep_search(industry, location)
-    market_context = [r.get("title", "") for r in market_search_results][:5]
-
-    prompt = f"""
-You are a market research analyst. Based on this startup idea and the
-market-specific search context below, estimate the market opportunity.
-
-Idea: {extracted.get('idea_name')}
-Industry: {industry}
-Location/Target Market: {location}
-Problem: {extracted.get('problem')}
-Target Customer: {extracted.get('target_customer')}
-Market search context: {market_context}
-
-Return ONLY valid JSON with these fields:
-{{
-  "tam_estimate": "short description of Total Addressable Market",
-  "sam_estimate": "short description of Serviceable Available Market",
-  "som_estimate": "short description of Serviceable Obtainable Market",
-  "growth_trend": "one sentence on industry growth trend in this location",
-  "customer_segments": ["segment1", "segment2"],
-  "market_size_score": <number 0-10, where 10 = very large/growing market>
-}}
-"""
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
+    relevant = (
+        filter_relevant_results_with_fallback(extracted, raw_results, min_relevance=0.20, min_results=4)
+        if validation["is_valid"] else []
     )
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "")
-    try:
-        result = json.loads(text)
-    except json.JSONDecodeError:
-        result = {
-            "tam_estimate": text, "sam_estimate": "", "som_estimate": "",
-            "growth_trend": "", "customer_segments": [], "market_size_score": 5.0,
+
+    # Deterministic scoring - no LLM call for the number itself
+    market_size_score = _deterministic_market_size_score(relevant, len(raw_results))
+    customer_segments = _deterministic_segments(extracted)
+
+    if not relevant:
+        return {
+            "tam_estimate": "Insufficient retrieved data to estimate market size.",
+            "sam_estimate": "Insufficient retrieved data to estimate market size.",
+            "som_estimate": "Insufficient retrieved data to estimate market size.",
+            "growth_trend": "No relevant market data was retrieved for this idea.",
+            "customer_segments": customer_segments,
+            "market_size_score": market_size_score,
+            "data_quality": {"relevant_count": 0, "total_count": len(raw_results)},
         }
 
-    # Include the market-specific search sources used, for transparency
-    result["market_search_sources"] = [
-        {"title": r.get("title", ""), "url": r.get("url", "")}
-        for r in market_search_results[:5]
-    ]
-    return result
+    # LLM used ONLY to phrase a growth trend description, strictly
+    # grounded in retrieved snippets - explicitly told not to invent
+    # numbers it wasn't given.
+    context_snippets = [f"{r.get('title', '')}: {r.get('content', '')[:300]}" for r in relevant[:6]]
+    prompt = f"""
+Based ONLY on the retrieved information below, write one sentence
+describing the market/industry trend relevant to this startup idea.
+Do NOT invent specific market size figures (TAM/SAM/SOM) - only
+describe qualitative trend, based strictly on what is retrieved.
+If the retrieved information does not clearly indicate a trend, say so.
+
+Idea industry: {extracted.get('industry', '')}
+Retrieved information:
+{chr(10).join(context_snippets)}
+"""
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+        growth_trend = response.choices[0].message.content.strip()
+    except Exception:
+        growth_trend = "Unable to generate a trend summary at this time."
+
+    return {
+        "tam_estimate": "Not deterministically estimable without a verified market data source; not fabricated.",
+        "sam_estimate": "Not deterministically estimable without a verified market data source; not fabricated.",
+        "som_estimate": "Not deterministically estimable without a verified market data source; not fabricated.",
+        "growth_trend": growth_trend,
+        "customer_segments": customer_segments,
+        "market_size_score": market_size_score,
+        "data_quality": {"relevant_count": len(relevant), "total_count": len(raw_results)},
+    }
