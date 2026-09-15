@@ -1,345 +1,345 @@
-**RESEARCH DOCUMENT**
+# AI Startup Idea Validator
 
-**AI Startup Idea Validator**
+A Multi-Agent AI platform that validates startup ideas using Large Language Models (LLMs) and live market intelligence.
 
-_An Intelligent Multi-Agent System for Automated Startup Validation_
+---
 
-| **Project Title**  | AI Startup Idea Validator              |
-| ------------------ | -------------------------------------- |
-| **Internship**     | Infosys Springboard Virtual Internship |
-| **Domain**         | Artificial Intelligence                |
-| **Team No.**       | 3                                      |
-| **Guide / Mentor** | Mr. Bhargavesh Dakka                   |
-| **Date**           | 06-08-2026                             |
+## Project Overview
 
-Infosys Springboard Virtual Internship Program
+AI Startup Idea Validator is a Multi-Agent AI platform designed to help entrepreneurs, innovators, and startups evaluate business ideas before investing time and resources into development.
 
-# **Table of Contents**
+The platform combines Large Language Models (LLMs) with live, location-aware web search to extract structured business information, analyze the market and competitors, assess risk, recommend an MVP, generate a go-to-market strategy, and produce mentor-style guidance for the founder.
 
-[**Table of Contents** 2](#_Toc236901631)
+The project follows a Multi-Agent AI Architecture, coordinated by a central Orchestrator Agent that manages task planning, agent coordination, and shared context across the full validation pipeline. Each research-oriented agent performs its own targeted deep search rather than relying on a single shared search result.
 
-[**1\. Introduction** 3](#_Toc236901632)
+---
 
-[**1.1 Project Overview** 3](#_Toc236901633)
+## Features
 
-[**1.2 Problem Statement** 3](#_Toc236901634)
+- AI-powered Startup Idea Processing
+- Location Agent — detects or lets the user select a target market (India, US, Europe, Southeast Asia, Global, etc.), so every downstream agent reasons with regional context
+- Deep Search — Web Search, Market Analysis, Competitor, SWOT & Risk, MVP Recommendation, and GTM Strategy agents each run their own targeted DuckDuckGo search, automatically refining and re-searching if the first attempt returns too few relevant results
+- Live Market Research using DuckDuckGo Search
+- Structured Business Information Extraction
+- Multi-Agent AI Architecture with a central Orchestrator Agent
+- Market Analysis (TAM/SAM/SOM estimates, growth trend, customer segments)
+- Competitor Analysis with market gap identification
+- SWOT and Risk Analysis
+- MVP Feature Recommendation with prioritized roadmap
+- Go-To-Market Strategy generation
+- Automated Validation Report compilation
+- Conversational Advisor for follow-up questions
+- Viability Score (0-100) combining idea clarity, competition, market, and risk signals
+- Blind Spot Finder — surfaces what the founder has not addressed
+- Honest Summary — a grounded, mentor-style closing assessment
+- Elevator Pitch Generator — auto-generated one-liner and tagline
+- Funding Suggestions — realistic funding paths with reasoning
+- Interactive Streamlit Dashboard with sidebar navigation and live agent-status log
+- Secure API Key Management using `.env`
+- Persistent Idea History in PostgreSQL — survives restarts and new sessions
+- Downloadable PDF Validation Reports
+- Standalone CLI pipeline (`pipeline.py`) for running validations outside Streamlit
 
-[**1.3 Problem Solution** 3](#_Toc236901635)
+---
 
-[**2\. Project Objectives** 4](#_Toc236901636)
+## How It Works
 
-[**3\. Sprint 1 Objectives** 4](#_Toc236901637)
+The system follows this flow, matching our architecture diagram:
 
-[**4\. Technologies Used** 4](#_Toc236901638)
+1. **User** submits a startup idea and selects a target market through the Streamlit UI.
+2. **Orchestrator Agent** interprets the request, creates an execution plan, and invokes each agent in sequence, monitoring and passing context between them.
+3. **Agent Pipeline** runs in order:
+   - Idea Extraction Agent — extracts idea details and location (Location Agent)
+   - Web Search Agent — location-aware deep search on DuckDuckGo for competitors, market trends, and related articles
+   - Market Analysis Agent — deep search + estimates TAM/SAM/SOM, growth trend, and customer segments
+   - Competitor Analysis Agent — deep search + identifies competitors, strengths/weaknesses, and market gaps
+   - SWOT and Risk Analysis Agent — deep search + produces a SWOT analysis and a risk score
+   - MVP Feature Recommendation Agent — deep search + prioritizes a feature roadmap
+   - Go-To-Market Strategy Agent — deep search + recommends positioning, channels, and pricing
+   - Report Generation Agent — compiles everything into a structured validation report
+   - Conversational Advisor Agent — answers follow-up questions about the generated report
+4. **Shared State** accumulates each agent's output, including the extracted location, so later agents and the final report can use earlier results.
+5. **Final Output** — a validation report, shown as formatted Markdown in the Streamlit dashboard, and available to download as a polished PDF.
 
-[**5\. System Architecture** 5](#_Toc236901639)
+This mirrors our reference architecture diagram (see System Architecture below), which represents both what is built today and the target end-state we are building toward.
 
-[**5.1 User Layer** 5](#_Toc236901640)
+---
 
-[**5.2 Streamlit Frontend** 5](#_Toc236901641)
+## Deep Search and Location Agent
 
-[**5.3 Orchestrator Agent** 5](#_Toc236901642)
+Two additions strengthen how each agent researches the idea:
 
-[**6\. DeepAgent Framework** 6](#_Toc236901643)
+**Location Agent** — Idea Extraction now identifies (or the user directly selects) a target market. This location is stored in Shared State and passed into every downstream agent's search query, so analysis reflects the actual region the founder is targeting instead of generic global assumptions (e.g. "$10B TAM in India" instead of a vague global estimate).
 
-[**6.1 Why DeepAgent?** 6](#_Toc236901644)
+**Deep Search** — Instead of one shared search reused by every agent, each research-oriented agent (Web Search, Market Analysis, Competitor, SWOT & Risk, MVP Recommendation, GTM Strategy) builds its own targeted query specific to its exact question. If the first search returns fewer than two relevant results, the agent automatically builds a refined, more specific query and searches a second time before reasoning over the combined results. This gives each agent research tailored to its own job, closer to how a real analyst team would divide the work, rather than every agent reasoning over the same shallow, generic search.
 
-[**6.2 Shared Memory** 7](#_Toc236901645)
+Idea Extraction, Viability Score, Insight Agent, Report Agent, and Conversational Advisor do not perform their own searches — they reason over what the other agents have already found.
 
-[**6.3 External Services** 7](#_Toc236901646)
+---
 
-[**6.4 Output Layer** 7](#_Toc236901647)
+## Implemented Agents
 
-[**7\. Agent Design** 7](#_Toc236901648)
+### Idea Extraction Agent 
 
-[**7.1 Sequential Execution Flow** 7](#_Toc236901649)
+Extracts structured information from the user's startup idea: idea name, industry, business model, problem statement, solution, target customers, and location/target market.
 
-[**8\. Sprint 1 Modules** 8](#_Toc236901650)
+### Web Search Agent
 
-[**8.1 Agent Pipeline** 8](#_Toc236901651)
+Performs a location-aware deep search using DuckDuckGo (no API key required) to find competitors, market trends, and related articles.
 
-[**9\. Workflow** 9](#_Toc236901652)
+### Market Analysis Agent
 
-[**10\. Sprint Deliverables** 9](#_Toc236901653)
+Runs its own deep search for market-size and growth data specific to the idea's industry and location, then estimates market opportunity (TAM/SAM/SOM), growth trend, and customer segments.
 
-[**Conclusion** 9](#_Toc236901654)
+### Competitor Agent
 
-# **1\. Introduction**
+Runs its own deep search for competitors specific to the idea, industry, and location, comparing strengths and weaknesses and identifying market gaps.
 
-## **1.1 Project Overview**
+### SWOT and Risk Agent
 
-Entrepreneurs often develop innovative startup ideas but face significant challenges in evaluating whether those ideas are practical, profitable, and capable of succeeding in the market. Conducting market research, identifying competitors, understanding customer demand, and preparing business strategies requires substantial time and expertise.
+Runs its own deep search for industry-specific risks and challenges, then produces a SWOT analysis (strengths, weaknesses, opportunities, threats) and a risk score used in the Viability Score.
 
-The AI Startup Idea Validator is designed as an intelligent multi-agent system that automates the startup validation process. Users submit their startup idea through a web interface, after which multiple specialized AI agents collaborate to gather market information, analyze competitors, evaluate risks, recommend MVP features, and generate a structured validation report. This reduces manual effort and enables entrepreneurs to make informed business decisions.
+### MVP Recommendation Agent
 
-## **1.2 Problem Statement**
+Runs its own deep search for comparable app features, then recommends a prioritized MVP feature set with an estimated development timeline.
 
-Traditional startup validation involves several manual activities:
+### Go-To-Market Strategy Agent
 
-- Competitor analysis
-- Customer segmentation
-- Risk identification
-- Market research
-- Business planning
+Runs its own deep search for customer acquisition approaches, then generates a positioning statement, marketing channels, pricing strategy, and launch checklist.
 
-These tasks consume considerable time and resources, making them difficult for early-stage entrepreneurs.
+### Report Generation Agent
 
-### **Existing Challenges**
+Compiles all agent outputs into a single structured validation report, viewable in the Streamlit dashboard and downloadable as a polished **PDF** (see `tools/pdf_generator.py`) - the Markdown version is still generated internally and used for the in-app display, but every "Download" button now produces a real `.pdf` file for easier reference/sharing.
 
-- Manual market research requires considerable time.
-- Competitor analysis is difficult for new entrepreneurs.
-- Business feasibility depends on multiple interrelated factors.
-- Startup founders often lack business expertise.
-- Preparing professional validation reports is challenging.
-- Market information changes rapidly and requires continuous updates.
+### Conversational Advisor Agent
 
-## **1.3 Problem Solution**
+Answers founder follow-up questions about their validation report (e.g. "why is this competitor stronger?") without rerunning the full pipeline.
 
-The proposed AI Startup Idea Validator addresses this challenge by automating the complete startup validation pipeline using multiple intelligent agents working collaboratively. The solution integrates:
+### Viability Score
 
-- Streamlit-based user interface
-- DeepAgent framework for multi-agent orchestration
-- DuckDuckGo Search for real-time web information
-- Groq / OpenAI LLMs for reasoning and analysis
-- Shared memory for context management
-- Automated report generation
+Combines idea clarity, competition density, market analysis, and SWOT risk into a single 0-100 score with a plain-language verdict.
 
-# **2\. Project Objectives**
+### Insight Layer
 
-The primary objectives of the project are:
+Generates the mentor-style layer of the report:
 
-- Validate startup ideas automatically
-- Retrieve live market information
-- Analyze competitors
-- Identify business risks
-- Recommend MVP features
-- Generate a professional startup validation report
+- Blind Spot Finder — identifies what the founder has not addressed
+- Honest Summary — a short, realistic closing statement
+- Elevator Pitch Generator — a punchy one-liner and tagline
+- Funding Suggestions — realistic funding paths with reasoning
+
+### Persistent Idea History (PostgreSQL)
+
+Every completed validation is saved to a PostgreSQL `validated_ideas` table (`db/database.py`) - idea details, viability score, quick summary, and the full agent output as JSONB. The History tab reads from this table, so past validations survive app restarts and new browser sessions instead of disappearing when the old in-memory session state was cleared. Persistence fails soft: if Postgres isn't reachable, the validator still works, it just can't save/list history until the database is back.
+
+### Standalone Pipeline (CLI)
+
+The same multi-agent pipeline that powers the Streamlit UI can be run directly from the command line via `pipeline.py`, decoupled from Streamlit - useful for scripting, scheduling, or CI:
+
+```bash
+python pipeline.py "A marketplace app for renting power tools" \
+    --location "Hyderabad, India" \
+    --budget "Bootstrap (very small budget)" \
+    --timeline "3 Months" \
+    --pdf-out validation_report.pdf
+```
+
+### Agent Prompt Documentation
+
+Every agent's role, inputs/outputs, and (where applicable) exact LLM prompt template is documented in [`prompts/`](./prompts/) - one Markdown file per agent, plus an index describing the pipeline order.
+
+---
+
+## Setup
+
+1. Copy `.env` and set your API keys: `GROQ_API_KEY`, and optionally `TAVILY_API_KEY`.
+2. Set your PostgreSQL connection - either a single `DATABASE_URL`, or the individual `PG_HOST` / `PG_PORT` / `PG_DB` / `PG_USER` / `PG_PASSWORD` variables. The app creates the `validated_ideas` table automatically on first run (`db/database.py:init_db()`); history/DB features degrade gracefully if the database isn't reachable.
+3. `pip install -r requirements.txt`
+4. Run the dashboard: `streamlit run ui/streamlit_app.py`, or run a single validation from the CLI: `python pipeline.py "your idea here"`.
+
+---
+
+## Planned / Future Work
+
+- Migrate orchestration to LangChain (currently a custom Python orchestrator)
+- Vector database and file storage for semantic search across past validations
+- Additional report export formats: DOC, HTML (Markdown + PDF supported today)
+- Richer shared state: user session state, conversation memory, execution logs
+- Docker-based deployment
+- Extend deep search with additional refinement rounds, currently limited to one retry per agent
+
+---
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| Python | Core development |
+| Streamlit | Frontend and UI |
+| Groq API | LLM provider for all agents |
+| DuckDuckGo Search | Live, location-aware deep search (no API key required) |
+| PostgreSQL | Persistent storage of idea validation history |
+| ReportLab | PDF report generation |
+| LangChain (planned) | Agent orchestration |
+| Docker (planned) | Deployment |
+| Git and GitHub | Version control |
 
-# **3.Objectives**
+---
 
-It mainly focuses on establishing the project's foundation. The completed tasks include:
+## Project Structure
 
-- Studying startup validation frameworks
-- Designing the multi-agent architecture
-- Defining agent responsibilities
-- Designing the orchestration workflow
-- Building the startup idea submission interface
-- Integrating the Web Search Agent
-- Creating the execution pipeline
+```text
+ai-startup-validator-demo/
+|
+├── app/
+│   ├── config.py               
+│   └── orchestrator.py         
+├── agents/
+│   ├── idea_extraction_agent.py    
+│   ├── web_search_agent.py         
+│   ├── market_analysis_agent.py    
+│   ├── competitor_agent.py         
+│   ├── swot_risk_agent.py          
+│   ├── mvp_recommendation_agent.py 
+│   ├── gtm_strategy_agent.py       
+│   ├── viability_score_agent.py
+│   ├── insight_agent.py
+│   ├── report_agent.py
+│   ├── summary_agent.py
+│   └── conversational_advisor.py
+├── tools/
+│   ├── duckduckgo_tool.py      
+│   ├── deep_search.py          
+│   ├── pdf_generator.py
+│   ├── link_validator.py
+│   ├── input_validator.py
+│   ├── timeout_utils.py
+│   ├── validators.py
+│   ├── llm_tool.py
+│   └── location_data.py
+├── db/
+│   └── database.py              (PostgreSQL persistence for idea history)
+├── prompts/
+│   ├── README.md                (agent prompt/role documentation index)
+│   └── <one .md per agent>
+├── state/
+│   └── memory.py              
+├── ui/
+│   └── streamlit_app.py        
+├── web_search_agent/
+│   ├── query_planner.py        
+│   └── cleaner.py             
+├── .streamlit/
+│   └── config.toml             
+├── style_block.py               
+├── pipeline.py                   (standalone CLI entry point)
+├── models.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+└── screenshots/
+    ├── Home.png
+    ├── dashboard.png
+    ├── search-results.png
+    └── Architecture.png
+```
 
-These objectives align with the first milestone of the project.
+Note: API keys are stored locally in a `.env` file, which is excluded from GitHub using `.gitignore`.
 
-# **4\. Technologies Used**
+---
 
-| **Layer**                 | **Technology**        | **Purpose**                       |
-| ------------------------- | --------------------- | --------------------------------- |
-| **Frontend**              | Streamlit             | User interface                    |
-| **Programming Language**  | Python                | Core application logic            |
-| **Multi-Agent Framework** | DeepAgent             | Agent orchestration and execution |
-| **LLM**                   | Groq / OpenAI         | Natural language reasoning        |
-| **Search Engine**         | DuckDuckGo            | Real-time web search              |
-| **Memory**                | Shared Memory Store   | Context management                |
-| **Report Generation**     | Markdown / PDF / HTML | Downloadable reports              |
-| **Version Control**       | Git & GitHub          | Source code management            |
+## Installation
 
-# **5\. System Architecture**
+### 1. Clone the Repository
 
-## **5.1 User Layer**
+```bash
+git clone https://github.com/Siddhi9898/AI-Startup-Idea-Validator.git
+cd AI-Startup-Idea-Validator
+```
 
-The entrepreneur interacts with the Streamlit application by submitting a startup idea. The interface also provides access to workspace management, progress monitoring, reports, and conversational assistance.
+### 2. Create a Virtual Environment
 
-## **5.2 Streamlit Frontend**
+```bash
+python -m venv venv
+```
 
-The frontend is responsible for:
+### 3. Activate the Virtual Environment
 
-- Idea submission
-- Workspace management
-- Pipeline visualization
-- Report dashboard
-- Chat advisor
-- Report download
+Windows:
 
-It acts as the communication layer between the user and the DeepAgent orchestration framework.
+```bash
+venv\Scripts\activate
+```
 
-## **5.3 Orchestrator Agent**
+Linux / macOS:
 
-The Orchestrator Agent coordinates the execution of the complete validation pipeline. Its responsibilities include:
+```bash
+source venv/bin/activate
+```
 
-### **Task Planning**
+### 4. Install Dependencies
 
-- Understanding the startup idea
-- Creating an execution plan
+```bash
+pip install -r requirements.txt
+```
 
-### **Agent Coordination**
+### 5. Configure Environment Variables
 
-- Executing agents sequentially
-- Passing outputs between agents
+Create a file named `.env`:
 
-### **Context Management**
+```env
+GROQ_API_KEY=your_groq_api_key
+```
 
-- Maintaining shared context
-- Aggregating results
+### 6. Run the Application
 
-The orchestrator ensures that every specialized agent receives the required information before execution.
+```bash
+streamlit run ui/streamlit_app.py
+```
 
-# **6\. DeepAgent Framework**
+---
 
-The AI Startup Idea Validator uses the DeepAgent Framework to implement a collaborative multi-agent architecture. Unlike traditional single-agent systems, DeepAgent enables multiple intelligent agents to work together while sharing context and intermediate outputs.
+## Sample Startup Idea
 
-The framework provides:
+An AI-powered platform that matches freelance nurses with hospitals facing temporary staffing shortages. The platform intelligently recommends qualified healthcare professionals based on skills, certifications, experience, location, and availability while managing scheduling, contracts, payments, and performance tracking.
 
-- Task planning
-- Agent orchestration
-- Shared memory
-- Context passing
-- Sequential execution
-- Workflow management
-- Result aggregation
+---
 
-Each agent is designed with a specific responsibility, and the DeepAgent framework ensures smooth coordination throughout the execution pipeline.
+## System Architecture
 
-## **6.1 Why DeepAgent?**
+![Architecture](screenshots/Architecture.png)
 
-DeepAgent was selected because it provides:
+This diagram represents both what is implemented today and the target end-state architecture we are building toward. See "Planned / Future Work" above for what remains.
 
-- Modular architecture
-- Reusable agents
-- Better scalability
-- Easier maintenance
-- Parallel or sequential workflows
-- Context-aware execution
-- Integration with external tools
+---
 
-| **Feature**                        | **Single LLM** | **LangGraph** | **DeepAgent** |
-| ---------------------------------- | -------------- | ------------- | ------------- |
-| **Multi-Agent Support**            | Limited        | Good          | **Excellent** |
-| **Task Planning**                  | No             | Partial       | **Yes**       |
-| **Agent Coordination**             | No             | Yes           | **Yes**       |
-| **Shared Memory**                  | Limited        | Yes           | **Yes**       |
-| **Sequential Workflow**            | Manual         | Yes           | **Yes**       |
-| **Modular Design**                 | Low            | Medium        | **High**      |
-| **Scalability**                    | Low            | Medium        | **High**      |
-| **Suitable for Startup Validator** | No             | Yes           | **Yes**       |
+### Home Page
 
-## **6.2 Shared Memory**
+![Home Page](screenshots/UI .png)
 
-The shared memory stores:
+### Structured Idea Dashboard
 
-- User session state
-- Conversation history
-- Intermediate results
-- Execution logs
-- Metadata
-- Context
+![Dashboard](screenshots/After logging in, Entering the data and giving relavent information.png)
 
-This enables efficient communication between agents without redundant processing.
+### Live Market and Competitor Search
 
-## **6.3 External Services**
+![Search Results](screenshots/Web search agent.png)
 
-The system integrates:
+---
 
-- DuckDuckGo Search
-- Groq / OpenAI
-- Additional APIs (future extensions)
+## Team
 
-## **6.4 Output Layer**
+Project: AI Startup Idea Validator
 
-The final startup validation report can be generated in:
+Developed as part of the Infosys Springboard Virtual Internship.
 
-- DOC
-- PDF
-- Markdown
-- HTML
+- Siddhi Bhingare
+- Sravya Maheswari
+- Niharika Pamugari
+- Kasula Pavan Kumar Reddy
 
-# **7\. Agent Design**
+---
 
-## **7.1 Sequential Execution Flow**
+## License
 
-The DeepAgent framework follows a sequential pipeline in which the output of one agent becomes the input of the next:
-
-**User Submits Startup Idea**
-
-**↓**
-
-**Idea Extraction Agent**
-
-**↓**
-
-**Location Agent**
-
-**↓**
-
-**Web Search Agent**
-
-**↓**
-
-**Market Analysis Agent**
-
-**↓**
-
-**Competitor Analysis Agent**
-
-**↓**
-
-**SWOT & Risk Agent**
-
-**↓**
-
-**MVP Recommendation Agent**
-
-**↓**
-
-**Go-To-Market Strategy Agent**
-
-**↓**
-
-**Report Generation Agent**
-
-**↓**
-
-**Conversational Advisor Agent**
-
-**↓**
-
-**Final Startup Validation Report**
-
-# **8.Modules**
-
-## **8.1 Agent Pipeline**
-
-Although only the first modules are implemented, the architecture defines the complete execution pipeline, which consists of:
-
-- Web Search Agent
-- Market Analysis Agent
-- Competitor Analysis Agent
-- SWOT & Risk Agent
-- MVP Recommendation Agent
-- Go-To-Market Strategy Agent
-- Report Generation Agent
-- Conversational Advisor Agent
-
-The DeepAgent orchestrator invokes these agents sequentially while sharing context between them.
-
-# **9\. Workflow**
-
-The end-to-end workflow begins when the user submits a startup idea through the Streamlit interface. The Orchestrator Agent then plans the execution sequence and invokes each specialized agent in turn - starting with idea extraction and web search, followed by market and competitor analysis, risk assessment, MVP recommendation, and go-to-market strategy formulation. Results from each stage are aggregated in shared memory and passed forward, culminating in an automatically generated validation report and an interactive conversational advisor for follow-up queries.
-
-# **10\. Deliverables**
-
-The following tasks were completed:
-
-- Analysis of startup validation requirements
-- Study of multi-agent architectures and startup validation frameworks
-- Design of the overall **system architecture**
-- Definition of **specialized AI agents**
-- Design of the **DeepAgent orchestration** workflow
-- Development of the **Streamlit-based user interface**
-- Integration of **DuckDuckGo Search** for web search
-- Preparation of **Low-Level Design** (LLD)
-- Definition of **sequential execution** and **context-sharing mechanisms**
-
-# **Conclusion**
-
-We established the foundational architecture for the AI Startup Idea Validator. A modular multi-agent design was proposed using the DeepAgent framework, with Streamlit providing an interactive user interface and DuckDuckGo Search and Groq/OpenAI serving as external services for information retrieval and AI reasoning.
-
-The architecture defines a sequential execution pipeline in which specialized agents collaborate through shared context to automate startup validation. This design provides a scalable foundation for implementing advanced analysis agents, report generation, and conversational advisory capabilities in subsequent sprints.
+This project is developed for educational, research, and demonstration purposes as part of the Infosys Springboard Virtual Internship.
