@@ -1,4 +1,15 @@
 """
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+Streamlit UI - Tabs Navigation
+Fixes: P1 (prominent download), P2 (quick summary), P3 (parallel
+speed-up in orchestrator), P4 (full alphabetical location dropdowns
++ real GPS), P5/P10 (timeouts), P7/P8 (form-based follow-up),
+P9 (dead link filtering), P11 (input validation), P12 (plausibility),
+P13 (sensitive content), plus a working floating chat icon.
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 Streamlit UI
 --------------
 See prompts/orchestrator.md and the various tools/*.py docstrings for
@@ -26,6 +37,10 @@ lives where in THIS file:
   normalized to English before the (English-tuned) pipeline runs, so
   every output is always in English. No language picker in the UI.
 - Agent score charts: tools/score_charts.py.
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 """
 
 import sys
@@ -38,6 +53,18 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+from app.orchestrator import run_pipeline
+from tools.input_validator import validate_idea_text, check_sensitive_content, check_plausibility
+from tools.location_data import ALL_COUNTRIES, COUNTRY_STATES, STATE_CITIES, get_gps_location
+from tools.timeout_utils import run_with_timeout, OperationTimedOut
+from tools.pdf_generator import build_report_pdf
+from db import database
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
 from app.orchestrator import run_pipeline, PipelineCancelled
 from tools.input_validator import validate_idea_text, check_sensitive_content, check_plausibility
@@ -48,6 +75,7 @@ from tools.translator import translate_to_english
 from tools.score_charts import build_agent_score_figures
 from tools import auth
 from db import database
+<<<<<<< HEAD
 from tools import offline_cache
 from style_block import CUSTOM_CSS
 
@@ -296,6 +324,298 @@ with st.sidebar:
         index=list(MASCOT_OPTIONS.keys()).index(st.session_state.get("mascot_choice", "Walking Explorer")),
     )
 
+=======
+from style_block import CUSTOM_CSS
+
+<<<<<<< Updated upstream
+if "db_ready" not in st.session_state:
+    st.session_state.db_ready = database.init_db()
+
+if "theme" not in st.session_state:
+    st.session_state.theme = "Dark"
+=======
+st.set_page_config(page_title="AI Startup Idea Validator", page_icon="\U0001F680", layout="wide")
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+>>>>>>> Stashed changes
+
+MAX_PIPELINE_SECONDS = 120  # safety net auto-cancel, on top of the manual Stop button
+
+<<<<<<< Updated upstream
+if theme_choice == "Light":
+    st.markdown(
+        """
+        <style>
+        .stApp { background-color: #FFFFFF; color: #000000; }
+        textarea, input, .stTextArea textarea, .stTextInput input {
+            background-color: #FFFFFF !important; color: #000000 !important;
+            border: 1px solid #888888 !important;
+        }
+        textarea::placeholder, input::placeholder { color: #666666 !important; opacity: 1 !important; }
+        label, .stTextArea label, .stTextInput label, .stSelectbox label,
+        p, span, div { color: #000000; }
+        div[data-baseweb="select"] > div {
+            background-color: #FFFFFF !important; color: #000000 !important;
+            border: 1px solid #888888 !important;
+        }
+        div[data-baseweb="select"] span { color: #000000 !important; }
+        .stButton > button, .stButton > button *,
+        button[data-testid="stBaseButton-secondary"], button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primary"] * {
+            background-color: #1F2937 !important; color: #FFFFFF !important;
+            border: 1px solid #1F2937 !important;
+        }
+        section[data-testid="stSidebar"] { background-color: #F5F5F5 !important; }
+        section[data-testid="stSidebar"] * { color: #000000 !important; }
+        div[data-testid="stRadio"] label p { color: #000000 !important; }
+        button[data-baseweb="tab"] { color: #000000 !important; }
+        button[data-baseweb="tab"] p { color: #000000 !important; }
+        button[aria-selected="true"] { color: #6D28D9 !important; }
+        button[aria-selected="true"] p { color: #6D28D9 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <style>
+        .stApp { background-color: #0E1117; color: #FAFAFA; }
+        textarea, input, .stTextArea textarea, .stTextInput input {
+            background-color: #262730 !important; color: #FAFAFA !important;
+            border: 1px solid #444444 !important;
+        }
+        textarea::placeholder, input::placeholder { color: #AAAAAA !important; opacity: 1 !important; }
+        label, .stTextArea label, .stTextInput label, .stSelectbox label,
+        p, span, div { color: #FAFAFA; }
+        div[data-baseweb="select"] > div {
+            background-color: #262730 !important; color: #FAFAFA !important;
+            border: 1px solid #444444 !important;
+        }
+        div[data-baseweb="select"] span { color: #FAFAFA !important; }
+        .stButton > button, .stButton > button *,
+        button[data-testid="stBaseButton-secondary"], button[data-testid="stBaseButton-secondary"] *,
+        button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primary"] * {
+            background-color: #FAFAFA !important; color: #0E1117 !important;
+            border: 1px solid #FAFAFA !important;
+        }
+        section[data-testid="stSidebar"] { background-color: #161A25 !important; }
+        section[data-testid="stSidebar"] * { color: #FAFAFA !important; }
+        div[data-testid="stRadio"] label p { color: #FAFAFA !important; }
+        button[data-baseweb="tab"] { color: #FAFAFA !important; }
+        button[data-baseweb="tab"] p { color: #FAFAFA !important; }
+        button[aria-selected="true"] { color: #A78BFA !important; }
+        button[aria-selected="true"] p { color: #A78BFA !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.title("AI Startup Idea Validator")
+st.caption("Multi-Agent Startup Validation Platform")
+
+=======
+if "db_ready" not in st.session_state:
+    st.session_state.db_ready = database.init_db()
+
+if "_executor" not in st.session_state:
+    st.session_state["_executor"] = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
+
+def _begin_revalidation():
+    """Prefill the editable form from the last submitted validation."""
+    saved = st.session_state.get("result", {}).get("_validation_input", {})
+    country = saved.get("country_input")
+    if country in COUNTRY_STATES and not saved.get("state_input"):
+        saved = {**saved, "state_input": "All States"}
+    if saved.get("state_input") in STATE_CITIES and not saved.get("city_input"):
+        saved = {**saved, "city_input": "All Cities/Towns"}
+    for key, value in saved.items():
+        st.session_state[key] = value
+    st.session_state.pop("result", None)
+    st.session_state.pop("current_validation_id", None)
+    from agents.conversational_advisor import reset_advisor_memory
+    reset_advisor_memory()
+
+
+for _key, _default in {
+    "idea_input": "", "budget_input": "Bootstrap (very small budget)",
+    "use_gps_input": False, "country_input": "All Countries",
+    "state_input": "", "city_input": "", "timeline_input": "1 Month",
+}.items():
+    if _key not in st.session_state:
+        st.session_state[_key] = _default
+
+# ---------------------------------------------------------------------------
+# Ctrl+Enter submits the idea (fixes: "if we press control+enter it
+# automatically takes the input and starts validating"). Reaches into
+# the PARENT page's DOM from this embedded iframe, since st.iframe
+# content lives in its own iframe document.
+# ---------------------------------------------------------------------------
+st.iframe(
+    """
+    <script>
+    (function() {
+        const doc = window.parent.document;
+        if (doc._ctrlEnterBound) { return; }
+        doc._ctrlEnterBound = true;
+        doc.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const buttons = doc.querySelectorAll('button');
+                for (const btn of buttons) {
+                    if (btn.innerText && btn.innerText.trim() === 'Validate Idea' && !btn.disabled) {
+                        btn.click();
+                        break;
+                    }
+                }
+            }
+        });
+    })();
+    </script>
+    """,
+    height=1,
+)
+
+st.markdown(
+    """
+    <div class="app-header">
+        <h1>AI Startup Idea Validator</h1>
+        <p>Multi-Agent Startup Validation Platform &mdash; from a raw idea to an investor-ready report in minutes.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------------
+# Sidebar: Account (register/login/logout) + per-user History + mascot pick
+# ---------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("### ✦ AI Startup")
+    st.caption("Idea validator workspace")
+    if st.session_state["user"] is None:
+        if st.button("◷  History", key="anonymous_history_button", width="stretch"):
+            st.info("Log in to hold and revisit your validation history.")
+    else:
+        st.caption("◷ Your private validation history is below.")
+    st.divider()
+    st.subheader("Account")
+
+    if st.session_state["user"] is None:
+        auth_mode = st.radio(
+            "auth_mode", ["Login", "Register", "Forgot Password"],
+            horizontal=True, label_visibility="collapsed", key="auth_mode_radio",
+        )
+        if auth_mode == "Login":
+            with st.form("login_form"):
+                login_username = st.text_input("Username")
+                login_password = st.text_input("Password", type="password")
+                login_submitted = st.form_submit_button("Log In")
+            if login_submitted:
+                res = auth.login(login_username, login_password)
+                if res["success"]:
+                    st.session_state["user"] = res["user"]
+                    st.rerun()
+                else:
+                    st.error(res["message"])
+        elif auth_mode == "Register":
+            with st.form("register_form"):
+                reg_username = st.text_input("Username", help="3–32 characters: letters, numbers, dots, dashes, or underscores.")
+                reg_email = st.text_input("Recovery email", help="Used only to send password-reset verification codes.")
+                reg_password = st.text_input("Password", type="password", help="At least 6 characters.")
+                reg_submitted = st.form_submit_button("Create Account")
+            if reg_submitted:
+                res = auth.register(reg_username, reg_email, reg_password)
+                if res["success"]:
+                    st.session_state["user"] = res["user"]
+                    st.rerun()
+                else:
+                    st.error(res["message"])
+        else:  # Forgot Password
+            reset_username = st.session_state.get("password_reset_username")
+            if not reset_username:
+                st.caption("Enter your username and we’ll send a one-time code to its recovery email.")
+                with st.form("request_reset_code_form"):
+                    fp_username = st.text_input("Username")
+                    fp_submitted = st.form_submit_button("Send verification code")
+                if fp_submitted:
+                    res = auth.request_password_reset_code(fp_username)
+                    if res["success"]:
+                        st.session_state["password_reset_username"] = fp_username.strip()
+                        st.success(res["message"])
+                        st.rerun()
+                    else:
+                        st.error(res["message"])
+            else:
+                st.caption(f"A code was sent to the recovery email for **{reset_username}**. It expires in 10 minutes.")
+                with st.form("confirm_reset_code_form"):
+                    fp_code = st.text_input("Verification code", max_chars=6)
+                    fp_new_password = st.text_input("New password", type="password", help="At least 6 characters.")
+                    fp_confirm_password = st.text_input("Confirm new password", type="password")
+                    fp_submitted = st.form_submit_button("Verify code & reset password")
+                if fp_submitted:
+                    if fp_new_password != fp_confirm_password:
+                        st.error("Passwords don't match.")
+                    else:
+                        res = auth.reset_password_with_code(reset_username, fp_code, fp_new_password)
+                        if res["success"]:
+                            st.session_state.pop("password_reset_username", None)
+                            st.success(res["message"])
+                        else:
+                            st.error(res["message"])
+                if st.button("Use a different username", key="different_reset_username"):
+                    st.session_state.pop("password_reset_username", None)
+                    st.rerun()
+        st.caption("You can validate and download reports without an account. Log in with your username to save and revisit history.")
+    else:
+        st.success(f"Logged in as **@{st.session_state['user'].get('username', st.session_state['user']['email'])}**")
+        if st.button("Log Out"):
+            st.session_state["user"] = None
+            st.session_state.pop("sidebar_history_cache", None)
+            st.session_state.pop("result", None)
+            st.session_state.pop("current_validation_id", None)
+            st.rerun()
+
+        st.divider()
+        st.subheader("Your History")
+        user_id = st.session_state["user"]["id"]
+        fresh = database.list_validations(user_id)
+        if fresh:
+            st.session_state["sidebar_history_cache"] = fresh
+            past = fresh
+        else:
+            cached = st.session_state.get("sidebar_history_cache")
+            if cached:
+                st.caption("\u26A0\uFE0F Showing last-loaded history (couldn't refresh - are you offline?).")
+                past = cached
+            else:
+                past = []
+
+        if not past:
+            st.caption("No validations saved yet.")
+        else:
+            for row in past[:15]:
+                score = row.get("viability_score")
+                label = f"{row['idea_name']} ({score if score is not None else 'N/A'}/100)"
+                if st.button(label, key=f"sidebar_load_{row['id']}", width='stretch'):
+                    full = database.get_validation(row["id"], user_id=user_id)
+                    if full:
+                        st.session_state["result"] = full
+                        st.session_state["current_validation_id"] = row["id"]
+                        from agents.conversational_advisor import load_advisor_history
+                        load_advisor_history(row["id"], full)
+                        st.rerun()
+
+    st.divider()
+    st.subheader("Progress Companion")
+    st.session_state["mascot_choice"] = st.selectbox(
+        "Pick your walking companion", list(MASCOT_OPTIONS.keys()),
+        index=list(MASCOT_OPTIONS.keys()).index(st.session_state.get("mascot_choice", "Walking Explorer")),
+    )
+
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 BUDGET_RANGES = [
     "Bootstrap (very small budget)",
     "Seed stage (small funding raised)",
@@ -311,6 +631,7 @@ with col_a:
     idea_text = st.text_area(
         "Describe your startup idea (2-3 lines):",
         height=100,
+<<<<<<< HEAD
         help="Write a real, coherent business idea, in any language - results are always shown in English. Tip: Ctrl+Enter submits.",
         disabled=pipeline_running,
     )
@@ -320,6 +641,28 @@ with col_b:
     st.write("**Location**")
     use_gps = st.checkbox("Use my current location (GPS)", disabled=pipeline_running)
 
+=======
+<<<<<<< Updated upstream
+        help="Write a real, coherent business idea.",
+    )
+    budget = st.selectbox("Expected Budget", BUDGET_RANGES)
+
+with col_b:
+    st.write("**Location**")
+    use_gps = st.checkbox("Use my current location (GPS)")
+
+=======
+        help="Write a real, coherent business idea, in any language - results are always shown in English. Tip: Ctrl+Enter submits.",
+        disabled=pipeline_running, key="idea_input",
+    )
+    budget = st.selectbox("Expected Budget", BUDGET_RANGES, disabled=pipeline_running, key="budget_input")
+
+with col_b:
+    st.write("**Location**")
+    use_gps = st.checkbox("Use my current location (GPS)", disabled=pipeline_running, key="use_gps_input")
+
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     if use_gps:
         gps = get_gps_location()
         if gps:
@@ -330,6 +673,7 @@ with col_b:
             st.info("Waiting for browser location permission...")
             target_market = ""
             country = state_input = city_input = ""
+<<<<<<< HEAD
     else:
         country = st.selectbox("Country (required)", ALL_COUNTRIES, disabled=pipeline_running)
 
@@ -344,11 +688,90 @@ with col_b:
             city_input = "" if city_input in ("All Cities/Towns",) else city_input
         else:
             city_input = st.text_input("City / Town (optional)", disabled=pipeline_running)
+=======
+<<<<<<< Updated upstream
+    else:
+        country = st.selectbox("Country (required)", ALL_COUNTRIES)
+
+        if country in COUNTRY_STATES:
+            state_input = st.selectbox("State", COUNTRY_STATES[country])
+            state_input = "" if state_input in ("All States",) else state_input
+        else:
+            state_input = st.text_input("State (optional)", help="Full dropdown not available for this country yet - enter manually.")
+
+        if state_input and state_input in STATE_CITIES:
+            city_input = st.selectbox("City / Town", STATE_CITIES[state_input])
+            city_input = "" if city_input in ("All Cities/Towns",) else city_input
+        else:
+            city_input = st.text_input("City / Town (optional)")
 
         location_parts = [p for p in [city_input.strip() if city_input else "", state_input.strip() if state_input else "", country if country != "All Countries" else ""] if p]
         target_market = ", ".join(location_parts)
 
+    timeline = st.selectbox("Launch Timeline", TIMELINES)
+
+validate_clicked = st.button("Validate Idea")
+
+if validate_clicked:
+    input_check = validate_idea_text(idea_text)
+    sensitive_check = check_sensitive_content(idea_text) if input_check["is_valid"] else {"is_sensitive": False}
+    plausibility_check = check_plausibility(idea_text) if input_check["is_valid"] else {"is_plausible": True}
+
+    if not input_check["is_valid"]:
+        st.session_state["result"] = {"invalid": True, "reason": input_check["reason"]}
+    elif sensitive_check.get("is_sensitive"):
+        st.session_state["result"] = {"invalid": True, "reason": sensitive_check["reason"]}
+    elif not plausibility_check.get("is_plausible", True):
+        st.session_state["result"] = {"invalid": True, "reason": plausibility_check["reason"]}
+    else:
+        try:
+            with st.spinner("Running multi-agent validation pipeline..."):
+                result = run_with_timeout(
+                    run_pipeline, args=(idea_text, target_market), timeout_seconds=45.0
+                )
+            if not result.get("invalid"):
+                meta = {
+                    "budget": budget,
+                    "timeline": timeline,
+                    "submitted_at": datetime.now(),
+                }
+                result["_meta"] = {**meta, "submitted_at": meta["submitted_at"].strftime("%Y-%m-%d %H:%M")}
+                # Persist to Postgres (fixes: history used to only live in
+                # st.session_state and vanished on refresh/new session).
+                # This call fails soft - a DB outage never blocks the
+                # already-computed result from being shown.
+                new_id = database.save_validation(result, meta)
+                st.session_state["current_validation_id"] = new_id
+                from agents.conversational_advisor import reset_advisor_memory
+                reset_advisor_memory()
+            st.session_state["result"] = result
+        except OperationTimedOut as e:
+            st.session_state["result"] = {"invalid": True, "reason": str(e)}
+=======
+    else:
+        country = st.selectbox("Country (required)", ALL_COUNTRIES, disabled=pipeline_running, key="country_input")
+
+        if country in COUNTRY_STATES:
+            state_input = st.selectbox("State", COUNTRY_STATES[country], disabled=pipeline_running, key="state_input")
+            state_input = "" if state_input in ("All States",) else state_input
+        else:
+            state_input = st.text_input("State (optional)", help="Full dropdown not available for this country yet - enter manually.", disabled=pipeline_running, key="state_input")
+
+        if state_input and state_input in STATE_CITIES:
+            city_input = st.selectbox("City / Town", STATE_CITIES[state_input], disabled=pipeline_running, key="city_input")
+            city_input = "" if city_input in ("All Cities/Towns",) else city_input
+        else:
+            city_input = st.text_input("City / Town (optional)", disabled=pipeline_running, key="city_input")
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
+
+        location_parts = [p for p in [city_input.strip() if city_input else "", state_input.strip() if state_input else "", country if country != "All Countries" else ""] if p]
+        target_market = ", ".join(location_parts)
+
+<<<<<<< HEAD
     timeline = st.selectbox("Launch Timeline", TIMELINES, disabled=pipeline_running)
+=======
+    timeline = st.selectbox("Launch Timeline", TIMELINES, disabled=pipeline_running, key="timeline_input")
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
 validate_clicked = st.button("Validate Idea", type="primary", disabled=pipeline_running)
 
@@ -391,6 +814,14 @@ def _qa_history_for_pdf(validation_id):
 
 
 if validate_clicked and not pipeline_running:
+<<<<<<< HEAD
+=======
+    st.session_state["validation_input"] = {
+        "idea_input": idea_text, "budget_input": budget, "use_gps_input": use_gps,
+        "country_input": country if not use_gps else "All Countries", "state_input": state_input,
+        "city_input": city_input, "timeline_input": timeline,
+    }
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     input_check = validate_idea_text(idea_text)
     sensitive_check = check_sensitive_content(idea_text) if input_check["is_valid"] else {"is_sensitive": False}
     plausibility_check = check_plausibility(idea_text) if input_check["is_valid"] else {"is_plausible": True}
@@ -419,6 +850,10 @@ if validate_clicked and not pipeline_running:
         st.session_state["pipeline_cancel_event"] = cancel_event
         st.session_state["pipeline_start_time"] = time.time()
         st.session_state["pipeline_idea_text_en"] = idea_text_en
+<<<<<<< HEAD
+=======
+        st.session_state["stop_requested"] = False
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
         st.session_state.pop("result", None)
         st.rerun()
 
@@ -433,12 +868,20 @@ if "pipeline_future" in st.session_state:
 
     if not future.done():
         st.divider()
+<<<<<<< HEAD
         st.info("Running the multi-agent validation pipeline...")
+=======
+        if st.session_state.get("stop_requested"):
+            st.warning("Stopping... this can take a few seconds to reach a safe checkpoint.")
+        else:
+            st.info("Running the multi-agent validation pipeline...")
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
         st.markdown(
             render_progress_mascot(elapsed, st.session_state.get("mascot_choice", "Walking Explorer")),
             unsafe_allow_html=True,
         )
         if st.button("\u23F9 Stop & Modify Input"):
+<<<<<<< HEAD
             # Set the flag so the background thread stops at its next
             # checkpoint - but don't wait for it. Fixes: "stopping
             # should let me modify the input right away," not after
@@ -452,10 +895,26 @@ if "pipeline_future" in st.session_state:
             del st.session_state["pipeline_future"]
             del st.session_state["pipeline_cancel_event"]
             del st.session_state["pipeline_start_time"]
+=======
+            st.session_state["pipeline_cancel_event"].set()
+            st.session_state["stop_requested"] = True
+        if elapsed > MAX_PIPELINE_SECONDS:
+            st.session_state["pipeline_cancel_event"].set()
+        time.sleep(1)
+        st.rerun()
+    else:
+        job_output = future.result()
+        del st.session_state["pipeline_future"]
+        del st.session_state["pipeline_cancel_event"]
+        del st.session_state["pipeline_start_time"]
+
+        if job_output["status"] == "cancelled":
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
             st.session_state["result"] = {
                 "invalid": True, "cancelled": True,
                 "reason": "Validation stopped. You can modify your idea above and validate again.",
             }
+<<<<<<< HEAD
             st.rerun()
         if elapsed > MAX_PIPELINE_SECONDS:
             st.session_state["pipeline_cancel_event"].set()
@@ -487,40 +946,99 @@ if "pipeline_future" in st.session_state:
             reset_advisor_memory()
             st.session_state["result"] = result
 
+=======
+        elif job_output["status"] == "error":
+            st.session_state["result"] = {"invalid": True, "reason": job_output["error"]}
+        else:
+            result = job_output["result"]
+            result["idea_text"] = st.session_state.get("pipeline_idea_text_en", result.get("idea_text", ""))
+            meta = {"budget": budget, "timeline": timeline, "submitted_at": datetime.now()}
+            result["_meta"] = {**meta, "submitted_at": meta["submitted_at"].strftime("%Y-%m-%d %H:%M")}
+            result["_validation_input"] = st.session_state.get("validation_input", {})
+
+            user_id = st.session_state["user"]["id"] if st.session_state.get("user") else None
+            new_id = database.save_validation(result, meta, user_id=user_id)
+            st.session_state["current_validation_id"] = new_id
+            from agents.conversational_advisor import reset_advisor_memory
+            reset_advisor_memory()
+            st.session_state["result"] = result
+        st.session_state.pop("stop_requested", None)
+>>>>>>> Stashed changes
+
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 if "result" in st.session_state and "pipeline_future" not in st.session_state:
     result = st.session_state["result"]
+
+    from tools.floating_chat_icon import render_floating_assistant
+    render_floating_assistant(result)
 
     if result.get("invalid"):
         if result.get("cancelled"):
             st.warning(result.get("reason"))
         else:
             st.error(result.get("reason", "Please enter a valid input."))
+<<<<<<< HEAD
             st.info("Please modify your idea in the box above and click **Validate Idea** again - nothing is locked, you can edit and resubmit right away.")
     else:
         from tools.floating_chat_icon import render_floating_assistant
         render_floating_assistant(result)
 
+=======
+    else:
+<<<<<<< Updated upstream
+        # P1 fix: prominent download button + quick summary shown
+        # IMMEDIATELY, before any tabs - no scrolling required.
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
         # Results are always shown in English - the idea text itself is
         # silently normalized to English before the pipeline runs (see
         # the validate-click handler above), so there is nothing to
         # translate or ask about here.
         display_result = result
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
         st.divider()
         top_col1, top_col2 = st.columns([3, 1])
         with top_col1:
             st.subheader("Quick Summary")
+<<<<<<< HEAD
             st.info(display_result.get("quick_summary", "Summary not available."))
         with top_col2:
+=======
+<<<<<<< Updated upstream
+            st.info(result.get("quick_summary", "Summary not available."))
+        with top_col2:
+=======
+            st.info(display_result.get("quick_summary", "Summary not available."))
+        with top_col2:
+            st.button("✎ Edit & revalidate", on_click=_begin_revalidation, width="stretch")
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
             st.write("")
             st.write("")
             st.download_button(
                 "Download Full Report (PDF)",
+<<<<<<< HEAD
                 data=build_report_pdf(display_result, qa_history=_qa_history_for_pdf(st.session_state.get("current_validation_id"))),
+=======
+<<<<<<< Updated upstream
+                data=build_report_pdf(result),
+=======
+                data=build_report_pdf(display_result, qa_history=_qa_history_for_pdf(st.session_state.get("current_validation_id"))),
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                 file_name=f"{result.get('extracted', {}).get('idea_name', 'validation') or 'validation'}_report.pdf",
                 mime="application/pdf",
                 key="top_download_button",
             )
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
         if display_result.get("improvement_suggestions"):
             st.subheader("\U0001F4A1 Suggestions to Improve This Idea")
@@ -528,6 +1046,10 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                 st.write(f"- {suggestion}")
 
 
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
         st.divider()
 
         tabs = st.tabs([
@@ -630,7 +1152,47 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
             for suggestion in result["funding_suggestions"]:
                 st.write(f"**{suggestion.get('funding_type')}** — {suggestion.get('reason')}")
 
+<<<<<<< HEAD
         with tabs[10]:
+=======
+<<<<<<< Updated upstream
+        with tabs[9]:
+            st.subheader("Full Validation Report")
+            st.markdown(result["report"])
+            st.download_button(
+                "Download Report (PDF)",
+                data=build_report_pdf(result),
+                file_name=f"{result.get('extracted', {}).get('idea_name', 'validation') or 'validation'}_report.pdf",
+                mime="application/pdf",
+                key="bottom_download_button",
+            )
+
+        with tabs[10]:
+            st.subheader("Ask a Follow-up Question")
+            st.caption("This advisor remembers earlier questions in this conversation.")
+
+            from agents.conversational_advisor import _HISTORY_KEY
+            if _HISTORY_KEY in st.session_state:
+                for msg in st.session_state[_HISTORY_KEY]:
+                    if msg["role"] == "user":
+                        st.write(f"**You:** {msg['content']}")
+                    elif msg["role"] == "assistant":
+                        st.write(f"**Advisor:** {msg['content']}")
+
+            with st.form(key="advisor_form", clear_on_submit=True):
+                followup = st.text_input("Ask the Conversational Advisor about this report:")
+                submitted = st.form_submit_button("Ask Advisor")
+
+            if submitted and followup.strip():
+                from agents.conversational_advisor import ask_advisor
+                with st.spinner("Thinking..."):
+                    ask_advisor(followup, result, st.session_state.get("current_validation_id"))
+                st.rerun()
+            elif submitted:
+                st.warning("Please type a question first.")
+=======
+        with tabs[10]:
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
             st.subheader("Full Validation Report")
             st.markdown(display_result["report"])
             st.download_button(
@@ -640,6 +1202,10 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                 mime="application/pdf",
                 key="bottom_download_button",
             )
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
         with tabs[11]:
             st.subheader("Ask a Follow-up Question")
@@ -664,6 +1230,13 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
 
         with tabs[12]:
             st.subheader("History")
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+            st.caption("Persisted in PostgreSQL - survives refreshes and new sessions.")
+            if not st.session_state.get("db_ready"):
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
             user = st.session_state.get("user")
             if not user:
                 st.info(
@@ -671,6 +1244,7 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                     "personal history and revisit it later. You can still download this report's "
                     "PDF right now without logging in."
                 )
+<<<<<<< HEAD
             else:
                 user_id = user["id"]
                 past_validations = database.list_validations(user_id) if st.session_state.get("db_ready") else []
@@ -700,12 +1274,37 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                             "PG_PASSWORD or DATABASE_URL)."
                         )
 
+=======
+            elif not st.session_state.get("db_ready"):
+>>>>>>> Stashed changes
+                st.warning(
+                    "Could not connect to the PostgreSQL database, so history can't be "
+                    "loaded or saved right now. Check your DB settings in `.env` "
+                    "(PG_HOST / PG_PORT / PG_DB / PG_USER / PG_PASSWORD or DATABASE_URL)."
+                )
+            else:
+<<<<<<< Updated upstream
+                past_validations = database.list_validations()
+=======
+                user_id = user["id"]
+                past_validations = database.list_validations(user_id)
+                if past_validations:
+                    st.session_state["history_tab_cache"] = past_validations
+                else:
+                    cached = st.session_state.get("history_tab_cache")
+                    if cached:
+                        st.caption("\u26A0\uFE0F Showing last-loaded history (couldn't refresh - are you offline?).")
+                        past_validations = cached
+
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                 if not past_validations:
                     st.info("No validations saved yet.")
                 else:
                     for row in past_validations:
                         score = row.get("viability_score")
                         score_label = f"{score}/100" if score is not None else "N/A"
+<<<<<<< HEAD
                         submitted_at = row.get("submitted_at")
                         if hasattr(submitted_at, "strftime"):
                             submitted_label = submitted_at.strftime("%Y-%m-%d %H:%M")
@@ -718,6 +1317,15 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                                 submitted_label = datetime.fromisoformat(str(submitted_at)).strftime("%Y-%m-%d %H:%M")
                             except (ValueError, TypeError):
                                 submitted_label = str(submitted_at or "")
+=======
+<<<<<<< Updated upstream
+                        submitted = row.get("submitted_at")
+                        submitted_label = submitted.strftime("%Y-%m-%d %H:%M") if submitted else ""
+=======
+                        submitted_at = row.get("submitted_at")
+                        submitted_label = submitted_at.strftime("%Y-%m-%d %H:%M") if hasattr(submitted_at, "strftime") else str(submitted_at or "")
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                         with st.expander(f"{row['idea_name']} - Score: {score_label} - {submitted_label}"):
                             st.write(f"**Verdict:** {row.get('verdict', 'N/A')}")
                             st.write(f"**Budget:** {row.get('budget') or 'N/A'}")
@@ -728,14 +1336,41 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
 
                             chat_summary = database.get_chat_summary(row["id"])
                             chat_messages = database.get_advisor_messages(row["id"])
+<<<<<<< HEAD
                             qa_for_pdf = chat_messages
                             if chat_summary:
                                 qa_for_pdf = [{"role": "assistant", "content": f"(Summary of earlier conversation) {chat_summary}"}] + chat_messages
+=======
+<<<<<<< Updated upstream
+=======
+                            qa_for_pdf = chat_messages
+                            if chat_summary:
+                                qa_for_pdf = [{"role": "assistant", "content": f"(Summary of earlier conversation) {chat_summary}"}] + chat_messages
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                             if chat_summary or chat_messages:
                                 with st.expander("Advisor Chat History", expanded=False):
                                     if chat_summary:
                                         st.caption("Summary of earlier conversation:")
                                         st.write(chat_summary)
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+                                    for msg in chat_messages:
+                                        if msg["role"] == "user":
+                                            st.write(f"**You:** {msg['content']}")
+                                        else:
+                                            st.write(f"**Advisor:** {msg['content']}")
+
+                            past_full = database.get_validation(row["id"])
+                            dl_col1, dl_col2 = st.columns(2)
+                            with dl_col1:
+                                if past_full:
+                                    st.download_button(
+                                        "Download PDF",
+                                        data=build_report_pdf(past_full),
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                                     from tools.chat_ui import render_chat_history
                                     render_chat_history(chat_messages)
 
@@ -746,10 +1381,23 @@ if "result" in st.session_state and "pipeline_future" not in st.session_state:
                                     st.download_button(
                                         "Download PDF",
                                         data=build_report_pdf(past_full, qa_history=qa_for_pdf),
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                                         file_name=f"{row['idea_name']}_report.pdf",
                                         mime="application/pdf",
                                         key=f"history_pdf_{row['id']}",
                                     )
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+                            with dl_col2:
+                                if st.button("Delete", key=f"history_delete_{row['id']}"):
+                                    database.delete_validation(row["id"])
+                                    st.rerun()
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                             with btn_col2:
                                 if st.button("Continue Chatting", key=f"history_continue_{row['id']}"):
                                     if past_full:
@@ -767,3 +1415,15 @@ st.markdown(
     '<div class="app-footer">AI Startup Idea Validator &middot; Multi-Agent Validation Platform</div>',
     unsafe_allow_html=True,
 )
+<<<<<<< HEAD
+=======
+
+# The advisor launcher intentionally lives at the bottom-center of the footer
+# rather than floating over the report, but still opens the same conversation.
+_footer_result = st.session_state.get("result")
+if _footer_result and not _footer_result.get("invalid") and "pipeline_future" not in st.session_state:
+    with st.container(horizontal_alignment="center"):
+        from tools.floating_chat_icon import render_floating_assistant
+        render_floating_assistant(_footer_result)
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019

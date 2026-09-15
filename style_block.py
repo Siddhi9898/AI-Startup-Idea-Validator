@@ -1,11 +1,16 @@
 CUSTOM_CSS = """
 <style>
+<<<<<<< HEAD
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+=======
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 .stApp {
+<<<<<<< HEAD
     background-color: #0B0E17;
     background-image: radial-gradient(circle at 15% 0%, rgba(124,58,237,0.08) 0%, transparent 35%),
                        radial-gradient(circle at 85% 100%, rgba(124,58,237,0.06) 0%, transparent 40%);
@@ -36,13 +41,34 @@ html, body, [class*="css"] {
     width: 260px; height: 260px;
     background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%);
     border-radius: 50%;
+=======
+    background:
+        radial-gradient(circle at 73% 8%, rgba(106, 45, 205, .22), transparent 26rem),
+        radial-gradient(circle at 30% 100%, rgba(27, 124, 204, .10), transparent 30rem),
+        #070511;
+    color: #E7E9F0;
+}
+.block-container { max-width: 1360px; padding-top: 2rem; }
+.app-header {
+    background: linear-gradient(105deg, rgba(53, 20, 100, .95), rgba(20, 12, 54, .82));
+    border: 1px solid rgba(149, 83, 255, .38);
+    padding: 25px 30px;
+    border-radius: 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .28), inset 0 1px rgba(255,255,255,.07);
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 }
 .app-header h1 {
     color: #FFFFFF;
     font-size: 2rem;
     margin: 0;
+<<<<<<< HEAD
     font-weight: 800;
     letter-spacing: -0.03em;
+=======
+    font-weight: 700;
+    letter-spacing: -0.02em;
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 }
 .app-header p {
     color: #EDE7FF;
@@ -65,8 +91,11 @@ div[data-testid="stMarkdownContainer"] > h3 {
 }
 
 section[data-testid="stSidebar"] {
-    background-color: #10131F;
-    border-right: 1px solid #262B3D;
+    background: linear-gradient(180deg, #0d091b, #090712);
+    border-right: 1px solid #302354;
+}
+section[data-testid="stSidebar"] * {
+    color: #E7E9F0;
 }
 section[data-testid="stSidebar"] * {
     color: #E7E9F0;
@@ -90,11 +119,12 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
     color: #FFFFFF !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background-color: #161B29;
-    border: 1px solid #262B3D !important;
-    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(29, 20, 60, .93), rgba(14, 11, 34, .93));
+    border: 1px solid rgba(137, 102, 216, .28) !important;
+    border-radius: 16px;
 }
 div[data-testid="stMetric"] {
+<<<<<<< HEAD
     background-color: #161B29;
     border: 1px solid #262B3D;
     border-radius: 12px;
@@ -104,6 +134,12 @@ div[data-testid="stMetric"] {
 div[data-testid="stMetric"]:hover {
     border-color: #4C2A9E;
     transform: translateY(-2px);
+=======
+    background: linear-gradient(145deg, rgba(37, 26, 76, .9), rgba(15, 13, 35, .95));
+    border: 1px solid rgba(137, 102, 216, .32);
+    border-radius: 14px;
+    padding: 12px 14px;
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 }
 div[data-testid="stMetricValue"] {
     color: #B79CFF;
@@ -125,23 +161,30 @@ div.stButton > button[kind="primary"]:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(124,58,237,0.4);
 }
+<<<<<<< HEAD
 div.stButton > button[kind="primary"]:disabled {
     background: #3B3550;
     color: #8A85A0;
     box-shadow: none;
     transform: none;
 }
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 div.stButton > button[kind="secondary"] {
     background-color: #1B2032;
     border: 1px solid #2B3148;
     color: #E7E9F0;
     border-radius: 10px;
+<<<<<<< HEAD
     transition: border-color 0.15s ease, color 0.15s ease;
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 }
 div.stButton > button[kind="secondary"]:hover {
     border-color: #7C3AED;
     color: #C9B3FF;
 }
+<<<<<<< HEAD
 div[data-testid="stDownloadButton"] button {
     background-color: #161B29;
     border: 1px solid #7C3AED;
@@ -154,9 +197,11 @@ div[data-testid="stDownloadButton"] button:hover {
     background-color: #241A3D;
 }
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
-    background-color: #161B29 !important;
-    border: 1px solid #2B3148 !important;
+    background-color: rgba(12, 9, 28, .78) !important;
+    border: 1px solid #372959 !important;
     color: #E7E9F0 !important;
     border-radius: 8px !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -247,6 +292,51 @@ div[data-testid="stJson"] {
 hr {
     border-color: #262B3D !important;
 }
+.stTextInput input::placeholder, .stTextArea textarea::placeholder {
+    color: #6B7290 !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus { border-color: #9866ff !important; box-shadow: 0 0 0 2px rgba(152,102,255,.16) !important; }
+label, .stTextArea label, .stTextInput label, .stSelectbox label, .stRadio label {
+    color: #C9CCE0 !important;
+}
+/* Tabs */
+button[data-baseweb="tab"] {
+    color: #9CA3C4 !important;
+    font-weight: 500;
+}
+button[data-baseweb="tab"] p {
+    color: inherit !important;
+}
+button[aria-selected="true"] {
+    color: #C9B3FF !important;
+}
+button[aria-selected="true"] p {
+    color: #C9B3FF !important;
+}
+div[data-baseweb="tab-highlight"] {
+    background-color: #7C3AED !important;
+}
+div[data-baseweb="tab-border"] {
+    background-color: #262B3D !important;
+}
+/* Expanders */
+details {
+    background-color: #12162374;
+    border: 1px solid #262B3D !important;
+    border-radius: 10px !important;
+}
+summary {
+    color: #E7E9F0 !important;
+}
+/* Alert boxes */
+div[data-testid="stAlertContainer"] {
+    border-radius: 10px;
+    border: 1px solid #262B3D;
+}
+/* Divider */
+hr {
+    border-color: #262B3D !important;
+}
 .status-log {
     background-color: #10131F;
     border: 1px solid #262B3D;
@@ -263,5 +353,10 @@ hr {
     padding: 16px 0;
     border-top: 1px solid #1A1F30;
 }
+<<<<<<< HEAD
+=======
+div[data-testid="stPopover"] > div > button { border: 1px solid rgba(202, 151, 255, .8) !important; }
+div[data-testid="stTabs"] { background: rgba(14, 10, 32, .45); padding: .25rem .7rem 0; border-radius: 14px; }
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 </style>
 """

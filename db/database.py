@@ -42,6 +42,7 @@ except ImportError:  # pragma: no cover - only hit if the dependency isn't insta
 
 
 _CREATE_TABLE_SQL = """
+<<<<<<< HEAD
 -- Registered users (fixes: registration/login, per-user history
 -- isolation). Password hashes only - see tools/auth.py for hashing
 -- (bcrypt) - this module never sees or stores a plaintext password.
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS security_question TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS security_answer_hash TEXT;
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 CREATE TABLE IF NOT EXISTS validated_ideas (
     id SERIAL PRIMARY KEY,
     idea_name TEXT NOT NULL DEFAULT 'Untitled Idea',
@@ -77,6 +80,7 @@ CREATE TABLE IF NOT EXISTS validated_ideas (
 );
 CREATE INDEX IF NOT EXISTS idx_validated_ideas_submitted_at ON validated_ideas (submitted_at DESC);
 
+<<<<<<< HEAD
 -- Ties each validation to the user who ran it (nullable: anonymous,
 -- not-logged-in users can still validate ideas and download their
 -- PDF/chat immediately, they just have no user_id, so this row will
@@ -85,6 +89,8 @@ CREATE INDEX IF NOT EXISTS idx_validated_ideas_submitted_at ON validated_ideas (
 ALTER TABLE validated_ideas ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_validated_ideas_user_id ON validated_ideas (user_id, submitted_at DESC);
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 -- Chat summary: a running, compressed digest of the advisor
 -- conversation for this idea (see advisor_messages below for why
 -- this exists) - kept on the parent row since there's only ever one
@@ -109,6 +115,7 @@ CREATE TABLE IF NOT EXISTS advisor_messages (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_advisor_messages_validation_id ON advisor_messages (validation_id, created_at);
+<<<<<<< HEAD
 
 -- Password reset tokens (fixes: "reset your password via a real
 -- email link, then login" - replaces the earlier no-verification
@@ -125,6 +132,8 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens (token_hash);
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 """
 
 
@@ -158,11 +167,16 @@ def init_db() -> bool:
         return False
 
 
+<<<<<<< HEAD
 def save_validation(result: dict, meta: Optional[dict] = None, user_id: Optional[int] = None) -> Optional[int]:
+=======
+def save_validation(result: dict, meta: Optional[dict] = None) -> Optional[int]:
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     """
     Persists one completed pipeline run. `result` is the full
     SharedState.to_dict() output; `meta` is the optional
     {"budget": ..., "timeline": ...} the UI collects alongside the
+<<<<<<< HEAD
     idea. `user_id` ties this row to a registered user - pass None
     for an anonymous (not logged in) run, which means it will never
     appear in ANY user's History (by design - see the users/
@@ -170,6 +184,11 @@ def save_validation(result: dict, meta: Optional[dict] = None, user_id: Optional
     None if it couldn't be saved (database unreachable) - callers
     should treat that as non-fatal, since the in-memory result is
     still usable either way.
+=======
+    idea. Returns the new row's id, or None if it couldn't be saved
+    (database unreachable) - callers should treat that as
+    non-fatal, since the in-memory result is still usable either way.
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     """
     meta = meta or {}
     extracted = result.get("extracted", {})
@@ -183,9 +202,14 @@ def save_validation(result: dict, meta: Optional[dict] = None, user_id: Optional
                     """
                     INSERT INTO validated_ideas
                         (idea_name, idea_text, industry, target_market, budget, timeline,
+<<<<<<< HEAD
                          viability_score, verdict, quick_summary, report_markdown, full_result,
                          user_id, submitted_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+=======
+                         viability_score, verdict, quick_summary, report_markdown, full_result, submitted_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                     RETURNING id
                     """,
                     (
@@ -200,7 +224,10 @@ def save_validation(result: dict, meta: Optional[dict] = None, user_id: Optional
                         result.get("quick_summary", ""),
                         result.get("report", ""),
                         json.dumps(result),
+<<<<<<< HEAD
                         user_id,
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                         meta.get("submitted_at") or datetime.now(),
                     ),
                 )
@@ -214,6 +241,7 @@ def save_validation(result: dict, meta: Optional[dict] = None, user_id: Optional
         return None
 
 
+<<<<<<< HEAD
 def list_validations(user_id: int, limit: int = 50) -> list:
     """Returns lightweight summaries (newest first) for ONE user's
     History tab - NOT the full JSON blob, so listing stays fast even
@@ -223,6 +251,12 @@ def list_validations(user_id: int, limit: int = 50) -> list:
     user_id is falsy (e.g. not logged in)."""
     if not user_id:
         return []
+=======
+def list_validations(limit: int = 50) -> list:
+    """Returns lightweight summaries (newest first) for the History
+    tab - NOT the full JSON blob, so listing stays fast even with a
+    large history. Returns [] if the database isn't reachable."""
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     try:
         conn = _get_connection()
         try:
@@ -232,11 +266,18 @@ def list_validations(user_id: int, limit: int = 50) -> list:
                     SELECT id, idea_name, industry, target_market, budget, timeline,
                            viability_score, verdict, quick_summary, submitted_at
                     FROM validated_ideas
+<<<<<<< HEAD
                     WHERE user_id = %s
                     ORDER BY submitted_at DESC
                     LIMIT %s
                     """,
                     (user_id, limit),
+=======
+                    ORDER BY submitted_at DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                 )
                 return [dict(row) for row in cur.fetchall()]
         finally:
@@ -246,6 +287,7 @@ def list_validations(user_id: int, limit: int = 50) -> list:
         return []
 
 
+<<<<<<< HEAD
 def get_validation(validation_id: int, user_id: Optional[int] = None) -> Optional[dict]:
     """Returns the full stored pipeline result dict for one past
     validation (used to re-render tabs / regenerate a PDF / resume
@@ -253,10 +295,17 @@ def get_validation(validation_id: int, user_id: Optional[int] = None) -> Optiona
     is given, enforces ownership - a validation belonging to another
     user is treated as not found, so one user can never load another
     user's report by id."""
+=======
+def get_validation(validation_id: int) -> Optional[dict]:
+    """Returns the full stored pipeline result dict for one past
+    validation (used to re-render tabs / regenerate a PDF), or None
+    if not found / database unreachable."""
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     try:
         conn = _get_connection()
         try:
             with conn.cursor() as cur:
+<<<<<<< HEAD
                 if user_id is not None:
                     cur.execute(
                         "SELECT full_result FROM validated_ideas WHERE id = %s AND user_id = %s",
@@ -267,6 +316,12 @@ def get_validation(validation_id: int, user_id: Optional[int] = None) -> Optiona
                         "SELECT full_result FROM validated_ideas WHERE id = %s",
                         (validation_id,),
                     )
+=======
+                cur.execute(
+                    "SELECT full_result FROM validated_ideas WHERE id = %s",
+                    (validation_id,),
+                )
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
                 row = cur.fetchone()
                 return row[0] if row else None
         finally:
@@ -276,14 +331,20 @@ def get_validation(validation_id: int, user_id: Optional[int] = None) -> Optiona
         return None
 
 
+<<<<<<< HEAD
 def delete_validation(validation_id: int, user_id: Optional[int] = None) -> bool:
     """Deletes one past validation by id. If user_id is given,
     enforces ownership - only deletes if the row actually belongs to
     that user. Returns True on success."""
+=======
+def delete_validation(validation_id: int) -> bool:
+    """Deletes one past validation by id. Returns True on success."""
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     try:
         conn = _get_connection()
         try:
             with conn.cursor() as cur:
+<<<<<<< HEAD
                 if user_id is not None:
                     cur.execute(
                         "DELETE FROM validated_ideas WHERE id = %s AND user_id = %s",
@@ -291,6 +352,9 @@ def delete_validation(validation_id: int, user_id: Optional[int] = None) -> bool
                     )
                 else:
                     cur.execute("DELETE FROM validated_ideas WHERE id = %s", (validation_id,))
+=======
+                cur.execute("DELETE FROM validated_ideas WHERE id = %s", (validation_id,))
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
             conn.commit()
             return cur.rowcount > 0
         finally:
@@ -300,6 +364,7 @@ def delete_validation(validation_id: int, user_id: Optional[int] = None) -> bool
         return False
 
 
+<<<<<<< HEAD
 # --- Users (registration / login) -----------------------------------------
 # Password hashing lives in tools/auth.py (bcrypt) - this module only
 # ever stores/reads the resulting hash, never a plaintext password.
@@ -444,6 +509,8 @@ def mark_reset_token_used(token_id: int) -> bool:
         return False
 
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 # --- Advisor chat history -------------------------------------------------
 # Only relevant Q&A pairs get here (see agents/conversational_advisor.py's
 # relevance check) - off-topic questions are answered live but never saved.

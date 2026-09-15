@@ -45,6 +45,7 @@ def _styles():
     return styles
 
 
+<<<<<<< HEAD
 def _sanitize_text(text: str) -> str:
     """
     Fixes: "the PDF should be clear and understandable, no dark spots."
@@ -79,6 +80,10 @@ def _sanitize_text(text: str) -> str:
 def _escape(text: str) -> str:
     text = _sanitize_text(text or "")
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+=======
+def _escape(text: str) -> str:
+    return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
 
 
 def _score_color(score) -> colors.Color:
@@ -93,17 +98,24 @@ def _score_color(score) -> colors.Color:
     return colors.HexColor("#B91C1C")
 
 
+<<<<<<< HEAD
 def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
+=======
+def build_report_pdf(state_dict: dict) -> bytes:
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     """
     Builds a polished, multi-section PDF directly from the shared
     pipeline state dict (same data the Markdown report and every
     Streamlit tab already use) - so the PDF and the on-screen report
     can never drift out of sync with each other.
+<<<<<<< HEAD
 
     qa_history: optional list of {"role": "user"/"assistant",
     "content": str} - the advisor chat for this idea (fixes: "save
     the chat history in the PDF under the title Q & A"). Pass None
     or [] to omit the section entirely.
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     """
     extracted = state_dict.get("extracted", {})
     viability = state_dict.get("viability_score", {})
@@ -115,7 +127,10 @@ def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
     pitch = state_dict.get("elevator_pitch", {})
     funding = state_dict.get("funding_suggestions", [])
     blind_spots = state_dict.get("blind_spots", [])
+<<<<<<< HEAD
     improvement_suggestions = state_dict.get("improvement_suggestions", [])
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     log = state_dict.get("execution_log", [])
 
     styles = _styles()
@@ -130,6 +145,7 @@ def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
     story.append(Paragraph("Quick Summary", styles["SectionHeading"]))
     story.append(Paragraph(_escape(state_dict.get("quick_summary", "")), styles["ReportBody"]))
 
+<<<<<<< HEAD
     # Suggestions to improve
     if improvement_suggestions:
         story.append(Paragraph("Suggestions to Improve This Idea", styles["SectionHeading"]))
@@ -138,6 +154,8 @@ def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
             bulletType="bullet",
         ))
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     # Executive Summary / honest take
     story.append(Paragraph("Executive Summary", styles["SectionHeading"]))
     story.append(Paragraph(_escape(state_dict.get("honest_summary", "")), styles["ReportBody"]))
@@ -262,6 +280,7 @@ def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
             bulletType="bullet",
         ))
 
+<<<<<<< HEAD
     # Q & A (advisor chat history)
     if qa_history:
         story.append(Paragraph("Q &amp; A", styles["SectionHeading"]))
@@ -271,6 +290,8 @@ def build_report_pdf(state_dict: dict, qa_history: list = None) -> bytes:
             label = "Q" if msg["role"] == "user" else "A"
             story.append(Paragraph(f"<b>{label}:</b> {_escape(msg.get('content', ''))}", styles["ReportBody"]))
 
+=======
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
     # Execution log
     if log:
         story.append(Paragraph("Pipeline Execution Log", styles["SectionHeading"]))

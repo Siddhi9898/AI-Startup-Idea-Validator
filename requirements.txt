@@ -7,6 +7,15 @@ requests
 pydantic
 reportlab
 psycopg2-binary
+<<<<<<< HEAD
 bcrypt
 plotly
 streamlit-js-eval
+=======
+<<<<<<< Updated upstream
+=======
+bcrypt
+plotly
+streamlit-js-eval
+>>>>>>> Stashed changes
+>>>>>>> 14d1a88d30347689a3f1a51ab41d371192e50019
