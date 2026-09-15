@@ -1,14 +1,14 @@
 """
-Idea Extraction Agent
-------------------------
-The LLM is genuinely required here (turning free-form text into
-structured fields is inherently a language understanding task - not
-something a fixed rule can do). However, per reviewer feedback, the
-LLM call is now isolated from deterministic validation: the raw idea
-text is validated BEFORE calling the LLM, and the LLM's JSON output
-is deterministically validated and parsed AFTER, with retry logic -
-so malformed output is caught and fixed deterministically rather
-than silently passed downstream or crashing.
+Idea Extraction Agent (adds feasibility/ethics gate - fixes P11, P12, P13)
+------------------------------------------------------------------------------
+Before running the full expensive pipeline, this now validates:
+- P11: the input isn't gibberish/meaningless (numbers, random chars, too short)
+- P12: the idea is at least minimally realistic (not sci-fi impossible)
+- P13: the idea isn't clearly unethical/illegal
+
+If validation fails, extract_idea returns a dict with an "invalid"
+flag and a reason, so the UI can show a clear message instead of
+running the rest of the pipeline on garbage input.
 """
 
 from groq import Groq
@@ -18,71 +18,53 @@ from app.config import GROQ_API_KEY, MODEL_NAME
 client = Groq(api_key=GROQ_API_KEY)
 
 
-def _validate_raw_input(raw_idea: str) -> dict:
-    """Deterministic input validation - no LLM involved."""
-    if not raw_idea or not raw_idea.strip():
-        return {"is_valid": False, "reason": "empty_input"}
-    if len(raw_idea.strip()) < 10:
-        return {"is_valid": False, "reason": "too_short"}
-    return {"is_valid": True, "reason": "ok"}
+def _basic_input_check(raw_idea: str) -> str | None:
+    """Cheap, fast checks before spending an LLM call. Returns an
+    error message if invalid, or None if it passes."""
+    text = raw_idea.strip()
+    if len(text) < 10:
+        return "Please enter a valid input - your idea is too short to evaluate."
+    # crude check: does it contain at least a few real alphabetic words
+    words = [w for w in text.split() if w.isalpha() and len(w) > 2]
+    if len(words) < 3:
+        return "Please enter a valid input - this doesn't look like a startup idea description."
+    return None
 
 
-def _validate_extraction_output(data: dict) -> dict:
-    """
-    Deterministic validation of the LLM's structured output.
-    Checks for missing/empty required fields. No LLM involved.
-    """
-    required = ["idea_name", "problem", "solution", "target_customer", "industry", "business_model"]
-    missing = [f for f in required if not data.get(f) or not str(data.get(f)).strip()]
-    return {"is_valid": len(missing) == 0, "missing_fields": missing}
+def extract_idea(raw_idea: str) -> dict:
+    basic_error = _basic_input_check(raw_idea)
+    if basic_error:
+        return {"invalid": True, "reason": basic_error}
 
+    prompt = f"""You are evaluating a submitted startup idea for a validation tool.
 
-def _parse_llm_json(text: str) -> dict:
-    """Deterministic parsing/cleanup of LLM output. No LLM involved."""
-    text = text.strip().replace("```json", "").replace("```", "")
-    return json.loads(text)
+First, judge two things:
+1. Is this a coherent, realistic startup idea a real founder could
+   plausibly pursue (not physically impossible, not nonsense text)?
+2. Is this idea free of clearly unethical, illegal, or harmful intent
+   (e.g. not a scam, not designed to harm people)?
 
+If either check fails, respond with ONLY this JSON:
+{{"invalid": true, "reason": "one sentence explaining why, phrased politely to the user"}}
 
-def extract_idea(raw_idea: str, max_retries: int = 1) -> dict:
-    # Step 1: Deterministic input validation, before any LLM call
-    input_check = _validate_raw_input(raw_idea)
-    if not input_check["is_valid"]:
-        return {
-            "idea_name": "", "problem": "", "solution": "",
-            "target_customer": "", "industry": "", "business_model": "",
-            "validation_error": input_check["reason"],
-        }
+If both checks pass, extract the following structured fields and
+respond with ONLY this JSON (no markdown, no explanation):
+{{"invalid": false, "idea_name": "...", "problem": "...", "solution": "...",
+"target_customer": "...", "industry": "...", "business_model": "...",
+"location": "..."}}
+For "location": if the idea mentions a specific country, city, or region, use that.
+If no location is mentioned, infer the most likely target market, or use "Global".
 
-    prompt = f"""Extract the following structured fields from this startup idea.
-Return ONLY valid JSON, no markdown, no explanation.
-Fields: idea_name, problem, solution, target_customer, industry, business_model
 Startup idea: "{raw_idea}"
 """
-
-    attempts = 0
-    last_error = None
-    while attempts <= max_retries:
-        attempts += 1
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,  # minimize sampling variance
-            )
-            text = response.choices[0].message.content
-            data = _parse_llm_json(text)
-
-            # Step 2: Deterministic output validation, after the LLM call
-            output_check = _validate_extraction_output(data)
-            if output_check["is_valid"]:
-                return data
-            last_error = f"missing_fields: {output_check['missing_fields']}"
-        except (json.JSONDecodeError, Exception) as e:
-            last_error = str(e)
-
-    # Deterministic graceful failure - never crash the pipeline
-    return {
-        "idea_name": "", "problem": "", "solution": "",
-        "target_customer": "", "industry": "", "business_model": "",
-        "validation_error": f"extraction_failed_after_{attempts}_attempts: {last_error}",
-    }
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+    )
+    text = response.choices[0].message.content.strip()
+    text = text.replace("```json", "").replace("```", "")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"invalid": True, "reason": "Please enter a valid input - could not process this idea."}

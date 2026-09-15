@@ -36,9 +36,6 @@ The project follows a Multi-Agent AI Architecture, coordinated by a central Orch
 - Funding Suggestions — realistic funding paths with reasoning
 - Interactive Streamlit Dashboard with sidebar navigation and live agent-status log
 - Secure API Key Management using `.env`
-- Persistent Idea History in PostgreSQL — survives restarts and new sessions
-- Downloadable PDF Validation Reports
-- Standalone CLI pipeline (`pipeline.py`) for running validations outside Streamlit
 
 ---
 
@@ -59,7 +56,7 @@ The system follows this flow, matching our architecture diagram:
    - Report Generation Agent — compiles everything into a structured validation report
    - Conversational Advisor Agent — answers follow-up questions about the generated report
 4. **Shared State** accumulates each agent's output, including the extracted location, so later agents and the final report can use earlier results.
-5. **Final Output** — a validation report, shown as formatted Markdown in the Streamlit dashboard, and available to download as a polished PDF.
+5. **Final Output** — a validation report (currently Markdown, with PDF/DOC/HTML planned) is displayed in the Streamlit dashboard and available to download.
 
 This mirrors our reference architecture diagram (see System Architecture below), which represents both what is built today and the target end-state we are building toward.
 
@@ -109,7 +106,7 @@ Runs its own deep search for customer acquisition approaches, then generates a p
 
 ### Report Generation Agent
 
-Compiles all agent outputs into a single structured validation report, viewable in the Streamlit dashboard and downloadable as a polished **PDF** (see `tools/pdf_generator.py`) - the Markdown version is still generated internally and used for the in-app display, but every "Download" button now produces a real `.pdf` file for easier reference/sharing.
+Compiles all agent outputs into a single structured Markdown validation report, downloadable from the Streamlit dashboard.
 
 ### Conversational Advisor Agent
 
@@ -128,42 +125,14 @@ Generates the mentor-style layer of the report:
 - Elevator Pitch Generator — a punchy one-liner and tagline
 - Funding Suggestions — realistic funding paths with reasoning
 
-### Persistent Idea History (PostgreSQL)
-
-Every completed validation is saved to a PostgreSQL `validated_ideas` table (`db/database.py`) - idea details, viability score, quick summary, and the full agent output as JSONB. The History tab reads from this table, so past validations survive app restarts and new browser sessions instead of disappearing when the old in-memory session state was cleared. Persistence fails soft: if Postgres isn't reachable, the validator still works, it just can't save/list history until the database is back.
-
-### Standalone Pipeline (CLI)
-
-The same multi-agent pipeline that powers the Streamlit UI can be run directly from the command line via `pipeline.py`, decoupled from Streamlit - useful for scripting, scheduling, or CI:
-
-```bash
-python pipeline.py "A marketplace app for renting power tools" \
-    --location "Hyderabad, India" \
-    --budget "Bootstrap (very small budget)" \
-    --timeline "3 Months" \
-    --pdf-out validation_report.pdf
-```
-
-### Agent Prompt Documentation
-
-Every agent's role, inputs/outputs, and (where applicable) exact LLM prompt template is documented in [`prompts/`](./prompts/) - one Markdown file per agent, plus an index describing the pipeline order.
-
----
-
-## Setup
-
-1. Copy `.env` and set your API keys: `GROQ_API_KEY`, and optionally `TAVILY_API_KEY`.
-2. Set your PostgreSQL connection - either a single `DATABASE_URL`, or the individual `PG_HOST` / `PG_PORT` / `PG_DB` / `PG_USER` / `PG_PASSWORD` variables. The app creates the `validated_ideas` table automatically on first run (`db/database.py:init_db()`); history/DB features degrade gracefully if the database isn't reachable.
-3. `pip install -r requirements.txt`
-4. Run the dashboard: `streamlit run ui/streamlit_app.py`, or run a single validation from the CLI: `python pipeline.py "your idea here"`.
-
 ---
 
 ## Planned / Future Work
 
 - Migrate orchestration to LangChain (currently a custom Python orchestrator)
+- PostgreSQL for persistent storage of ideas, results, and reports
 - Vector database and file storage for semantic search across past validations
-- Additional report export formats: DOC, HTML (Markdown + PDF supported today)
+- Additional report export formats: PDF, DOC, HTML (currently Markdown only)
 - Richer shared state: user session state, conversation memory, execution logs
 - Docker-based deployment
 - Extend deep search with additional refinement rounds, currently limited to one retry per agent
@@ -178,8 +147,7 @@ Every agent's role, inputs/outputs, and (where applicable) exact LLM prompt temp
 | Streamlit | Frontend and UI |
 | Groq API | LLM provider for all agents |
 | DuckDuckGo Search | Live, location-aware deep search (no API key required) |
-| PostgreSQL | Persistent storage of idea validation history |
-| ReportLab | PDF report generation |
+| PostgreSQL (planned) | Persistent storage |
 | LangChain (planned) | Agent orchestration |
 | Docker (planned) | Deployment |
 | Git and GitHub | Version control |
@@ -205,23 +173,10 @@ ai-startup-validator-demo/
 │   ├── viability_score_agent.py
 │   ├── insight_agent.py
 │   ├── report_agent.py
-│   ├── summary_agent.py
 │   └── conversational_advisor.py
 ├── tools/
 │   ├── duckduckgo_tool.py      
-│   ├── deep_search.py          
-│   ├── pdf_generator.py
-│   ├── link_validator.py
-│   ├── input_validator.py
-│   ├── timeout_utils.py
-│   ├── validators.py
-│   ├── llm_tool.py
-│   └── location_data.py
-├── db/
-│   └── database.py              (PostgreSQL persistence for idea history)
-├── prompts/
-│   ├── README.md                (agent prompt/role documentation index)
-│   └── <one .md per agent>
+│   └── deep_search.py          
 ├── state/
 │   └── memory.py              
 ├── ui/
@@ -232,8 +187,6 @@ ai-startup-validator-demo/
 ├── .streamlit/
 │   └── config.toml             
 ├── style_block.py               
-├── pipeline.py                   (standalone CLI entry point)
-├── models.py
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
@@ -254,8 +207,7 @@ Note: API keys are stored locally in a `.env` file, which is excluded from GitHu
 
 ```bash
 git clone https://github.com/Siddhi9898/AI-Startup-Idea-Validator.git
-
-cd AI startup Idea Validator
+cd AI-Startup-Idea-Validator
 ```
 
 ### 2. Create a Virtual Environment
